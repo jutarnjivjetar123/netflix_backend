@@ -1,0 +1,10 @@
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToOne, JoinColumn } from "typeorm";
+
+@Entity("UserPassword")
+export default class UserPassword { 
+    @PrimaryGeneratedColumn("uuid")
+    passwordID: string;
+
+    @Column()
+    
+}
