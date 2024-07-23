@@ -5,37 +5,38 @@ import dotenv from "dotenv";
 dotenv.config();
 
 export default class JWTHelper {
-  static generateToken(payload: any, expiryTime: string = "1h") {
-    return jwt.sign(payload, process.env.TOKEN_SECRET, {
+  public static generateToken(
+    payload: any,
+    secretKey: string = "1234",
+    expiryTime: string = "1h"
+  ) {
+    return jwt.sign(payload, `${secretKey}-${process.env.TOKEN_SECRET}`, {
       expiresIn: expiryTime,
     });
   }
-
-  static validateToken(token: string) {
+  public static isValid(token: string, secretKey: string) {
     try {
-      return jwt.verify(token, process.env.TOKEN_SECRET);
+      jwt.verify(token, `${secretKey}-${process.env.TOKEN_SECRET}`);
+      return true;
     } catch (error) {
-      if (error instanceof jwt.TokenExpiredError)
-        return "Error: token has expired";
-      return "Error: " + error;
+      return false;
     }
   }
-
-  static getUserSaltFromToken(token: any) {
-    const decodedToken = JWTHelper.validateToken(token);
-    let userSalt: string;
-
-    if (typeof decodedToken === "string") {
-      // Handle case where token is a string
-      // For example, you may want to throw an error or handle it accordingly
-      console.log("Token is string, with error: " + decodedToken);
-      return null;
-    } else {
-      // Handle case where token is a JwtPayload
-      userSalt = decodedToken.salt;
-      console.log("User salt: " + userSalt);
+  public static getValidToken(token: string, secretKey: string) {
+    try {
+      const decodedToken = jwt.verify(
+        token,
+        `${secretKey}-${process.env.TOKEN_SECRET}`
+      );
+      return decodedToken;
+    } catch (error) {
+      if (error instanceof jwt.TokenExpiredError) {
+        return "Token has expired";
+      }
+      return "Token is invalid";
     }
-
-    return userSalt;
+  }
+  public static decodeToken(token: string) {
+    return jwt.decode(token);
   }
 }
