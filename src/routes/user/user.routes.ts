@@ -8,6 +8,7 @@ import JWTHelper from "../../helpers/jwtokens.helpers";
 import { timeStamp } from "console";
 import UserRepository from "../../repository/user.repository/user.repository";
 import SessionRepository from "../../repository/user.repository/session.repository";
+import SessionService from "../../service/user.service/session.service";
 class UserRouter {
   public router: express.Router;
 
@@ -24,7 +25,6 @@ class UserRouter {
       UserMiddleware.conditionalAuthentication,
       this.loginUser
     );
-    this.router.post("/protected/dashboard", this.getDashboardData);
   }
 
   private async registerUser(req: express.Request, res: express.Response) {
@@ -150,19 +150,19 @@ class UserRouter {
         });
       }
 
-      const jwtTokenToReturn = JWTHelper.generateToken(
-        {
-          data: email,
-          id: loginResult.returnValue.session.sessionID,
-        },
-        loginResult.returnValue.session.authToken
-      );
-      console.log("JWT: " + jwtTokenToReturn);
-      console.log(
-        "JWT decoded: " +
-          JSON.stringify(JWTHelper.decodeToken(jwtTokenToReturn))
-      );
-      res.cookie("Authorization", "Bearer " + jwtTokenToReturn);
+      // const jwtTokenToReturn = JWTHelper.generateToken(
+      //   {
+      //     data: email,
+      //     id: loginResult.returnValue.session.sessionID,
+      //   },
+      //   loginResult.returnValue.session.authToken
+      // );
+      // console.log("JWT: " + jwtTokenToReturn);
+      // console.log(
+      //   "JWT decoded: " +
+      //     JSON.stringify(JWTHelper.decodeToken(jwtTokenToReturn))
+      // );
+      // res.cookie("Authorization", "Bearer " + jwtTokenToReturn);
 
       return res.status(200).send({
         successState: true,
@@ -178,11 +178,11 @@ class UserRouter {
           email: {
             email: email,
           },
-          session: {
-            sessionID: loginResult.returnValue.session.sessionID,
-            authToken: loginResult.returnValue.session.authToken,
-            expiresAt: loginResult.returnValue.session.expiresAt,
-          },
+          // session: {
+          //   sessionID: loginResult.returnValue.session.sessionID,
+          //   authToken: loginResult.returnValue.session.authToken,
+          //   expiresAt: loginResult.returnValue.session.expiresAt,
+          // },
         },
       });
     }
@@ -240,47 +240,9 @@ class UserRouter {
       },
     });
   }
-  private async getDashboardData(req: express.Request, res: express.Response) {
-    const authorization = req.headers["authorization"].split(" 20")[1];
-    if (!authorization) {
-      return res.status(403).send({
-        successState: false,
-        message: "User is not logged in",
-        timestamp: new Date(),
-      });
-    }
-    const tokenPayload = JWTHelper.decodeToken(authorization);
-    if (!tokenPayload) {
-      return res.status(403).send({
-        successState: false,
-        message: "Token is invalid",
-        timestamp: new Date(),
-      });
-    }
-    const tokenString = JSON.stringify(tokenPayload);
-    const tokenJSON = JSON.parse(tokenString);
-    const sessionId = tokenJSON.id;
-    const userEmail = tokenJSON.email;
 
-    const user = await UserRepository.getUserByEmail(userEmail);
-    const session = await SessionRepository.getSessionByUser(user);
-
-    const isTokenValid = JWTHelper.getValidToken(
-      authorization,
-      session.authToken
-    );
-
-    return res.status(200).send({
-      successState: false,
-      message: "Dashboard data was sent",
-      data: {
-        user,
-        session,
-        isTokenValid
-      },
-      timestamp: new Date(),
-    });
-  }
+  //Function to retrieve dashboard data, for user based on the data from authentication token provided inside the request
+  //Extracts token, reviews if it is valid, if it is updates the token value, extracts userId from token, and checks database for active user session, and returns session, checks if the provided session ID inside the token is valid, if it is, returns neccessary data for dashboard (dashboard data is personalized for every user based on their watching needs)
 }
 
 export default new UserRouter().router;

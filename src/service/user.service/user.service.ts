@@ -7,7 +7,7 @@ import DataSanitation from "../../helpers/sanitation.helpers";
 import UserRepository from "../../repository/user.repository/user.repository";
 import SessionService from "./session.service";
 import ReturnObjectHandler from "../../utilities/returnObject.utility";
-import SessionManager from "../../helpers/session.helpers";
+
 import EncryptionHelpers from "../../helpers/encryption.helper";
 import validator, { isNumeric } from "validator";
 import { PhoneNumberHelper } from "../../helpers/phoneNumber.helpers";
@@ -525,10 +525,12 @@ export default class UserService {
         null
       );
     }
-    const createdSessionForUser = await SessionManager.setSessionForUser(
+    const createdSessionForUser = await SessionService.createNewSession(
       userToLogin,
+      new Date(new Date().getTime() + 24 * 60 * 60 * 1000),
       originIpAddress,
-      userAgent
+      userAgent,
+      ""
     );
     if (!createdSessionForUser) {
       return new ReturnObjectHandler("Could not login user", null);
@@ -589,10 +591,12 @@ export default class UserService {
         null
       );
     }
-    const createdSessionForUser = await SessionManager.setSessionForUser(
+    const createdSessionForUser = await SessionService.createNewSession(
       userToLogin,
+      new Date(new Date().getTime() + 24 * 60 * 60 * 1000),
       originIpAddress,
-      userAgent
+      userAgent,
+      ""
     );
     if (!createdSessionForUser) {
       return new ReturnObjectHandler("Could not login user", null);

@@ -47,6 +47,53 @@ export default class SessionRepository {
     );
     return newSession;
   }
+
+  public static async checkDoesUserHaveActiveSessionByUser(
+    userToCheckSessionFor: User
+  ): Promise<boolean> {
+    const checkSessionResult = await DatabaseConnection.getRepository(
+      UserSession
+    )
+      .findOne({
+        where: {
+          sessionOwner: userToCheckSessionFor,
+        },
+        relations: {
+          sessionOwner: true,
+        },
+      })
+      .then(() => {})
+      .catch((error) => {
+        console.log(
+          "[LOG-DATA] - " +
+            new Date() +
+            " -> LOG::ERROR::SessionRepository::checkDoesUserHaveActiveSessionByUser::Error occurred whilst finding active session for user with ID: " +
+            userToCheckSessionFor.userID +
+            ", error message: " +
+            error.message
+        );
+        return false;
+      });
+
+    if (!checkSessionResult) {
+      console.log(
+        "[LOG-DATA] - " +
+          new Date() +
+          " -> LOG::INFO::SessionRepository::checkDoesUserHaveActiveSessionByUser::Could not find active session for user with ID: " +
+          userToCheckSessionFor.userID +
+          "."
+      );
+      return false;
+    }
+    console.log(
+      "[LOG-DATA] - " +
+        new Date() +
+        " -> LOG::INFO::SessionRepository::checkDoesUserHaveActiveSessionByUser::Found active session for user with ID: " +
+        userToCheckSessionFor.userID
+    );
+    return true;
+  }
+
   public static async getSessionByUser(
     userToGetSessionFor: User
   ): Promise<UserSession | null> {
@@ -60,95 +107,47 @@ export default class SessionRepository {
     });
   }
 
-  public static async deleteSessionByUser(
-    userToDeleteSessionFor: User
-  ): Promise<boolean> {
-    const sessionToDelete = await this.getSessionByUser(userToDeleteSessionFor);
-    if (!sessionToDelete) {
-      console.log(
-        "[LOG-DATA] - " +
-          new Date() +
-          " -> LOG::Info::SessionRepository::deleteSessionByUser::sessionToDelete::No current session for user with ID: " +
-          userToDeleteSessionFor.userID +
-          " was found, so delete operation could not be executed"
-      );
-      return false;
-    }
-    await DatabaseConnection.getRepository(UserSession)
-      .remove(sessionToDelete)
+  public static async setSessionExpiryTimeBySession(
+    sessionToSetExpiryTimeFor: UserSession,
+    newExpiresAtDateTime: Date = new Date(
+      new Date().getTime() + 24 * 60 * 60 * 1000
+    )
+  ): Promise<UserSession | null> {
+    sessionToSetExpiryTimeFor.expiresAt = newExpiresAtDateTime;
+    return await DatabaseConnection.getRepository(UserSession)
+      .save(sessionToSetExpiryTimeFor)
       .then(() => {
         console.log(
-          "[LOG-DATA] - " +
+          "[LOG - DATA] " +
             new Date() +
-            " -> LOG::Info::SessionRepository::deleteSessionByUser::sessionToDelete::Session for user with ID: " +
-            userToDeleteSessionFor.userID +
-            " was found and removed, removed session ID: " +
-            sessionToDelete.sessionID
+            " -> LOG::INFO::SessionRepository::setSessionExpiryTimeBySession::Successfully set new expiry time for session with ID: " +
+            sessionToSetExpiryTimeFor.sessionID +
+            ", new expiry time: " +
+            sessionToSetExpiryTimeFor.expiresAt
         );
+        return sessionToSetExpiryTimeFor;
       })
       .catch((error) => {
         console.log(
-          "[LOG-DATA] - " +
+          "[LOG - DATA] " +
             new Date() +
-            " -> LOG::Info::SessionRepository::deleteSessionByUser::sessionToDelete::Error occured while deleting session for user with ID: " +
-            userToDeleteSessionFor.userID +
-            ", operation was canceled, erorr: " +
+            " -> LOG::ERROR::SessionRepository::setSessionExpiryTimeBySession::Failed to set new expiry time for session with ID: " +
+            sessionToSetExpiryTimeFor.sessionID +
+            ", error message" +
             error.message
-        );
-        return false;
-      });
-    return true;
-  }
-
-  public static async setSessionExpiryTimeByUser(
-    newExpiryTime: Date = new Date(new Date().getTime() + 24 * 60 * 60 * 1000),
-    sessionUser: User
-  ) {
-    const sessionToUpdate = await DatabaseConnection.getRepository(
-      UserSession
-    ).findOne({
-      where: {
-        sessionOwner: sessionUser,
-      },
-      relations: {
-        sessionOwner: true,
-      },
-    });
-    if (!sessionToUpdate.sessionID) {
-      console.log(
-        "[LOG-DATA] - " +
-          new Date() +
-          " -> LOG::Info::SessionRepository::setSessionExpiryTimeByUser::sessionToUpdate::Could not find session for user with ID: " +
-          sessionUser.userID
-      );
-      return null;
-    }
-    sessionToUpdate.expiresAt = newExpiryTime;
-    await DatabaseConnection.getRepository(UserSession)
-      .save(sessionToUpdate)
-      .then(() => {
-        console.log(
-          "[LOG-DATA] - " +
-            new Date() +
-            " -> LOG::Info::SessionRepository::setSessionExpiryTimeByUser::Session with ID: " +
-            sessionToUpdate.sessionID +
-            " lifespan was set to new expiry time and date: " +
-            sessionToUpdate.expiresAt +
-            " for user with ID: " +
-            sessionUser.userID
-        );
-      })
-      .catch((error) => {
-        console.log(
-          "[LOG-DATA] - " +
-            new Date() +
-            " -> LOG::Error::SessionRepository::setSessionExpiryTimeByUser::Error updating session expiry time, UPDATE operation on session with ID: " +
-            sessionToUpdate.sessionID +
-            " failed, session owner is user with ID: " +
-            sessionUser.userID
         );
         return null;
       });
-    return sessionToUpdate;
+  }
+
+  public static async deleteSession(sessionToDelete: UserSession) {
+    return await DatabaseConnection.getRepository(UserSession)
+      .remove(sessionToDelete)
+      .then(() => {
+        return true;
+      })
+      .catch(() => {
+        return false;
+      });
   }
 }
