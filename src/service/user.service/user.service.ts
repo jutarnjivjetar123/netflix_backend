@@ -5,7 +5,6 @@ import UserSalt from "../../models/user.model/salt.model";
 import UserPhoneNumber from "../../models/user.model/phone.model";
 import DataSanitation from "../../helpers/sanitation.helpers";
 import UserRepository from "../../repository/user.repository/user.repository";
-import SessionService from "./session.service";
 import ReturnObjectHandler from "../../utilities/returnObject.utility";
 
 import EncryptionHelpers from "../../helpers/encryption.helper";
@@ -13,6 +12,8 @@ import validator, { isNumeric } from "validator";
 import { PhoneNumberHelper } from "../../helpers/phoneNumber.helpers";
 import { parse } from "path";
 import { PhoneNumber } from "google-libphonenumber";
+import SessionRepository from "../../repository/user.repository/session.repository";
+
 export default class UserService {
   public static async checkDoesUserExistWithEmail(
     email: string
@@ -525,30 +526,11 @@ export default class UserService {
         null
       );
     }
-    const createdSessionForUser = await SessionService.createNewSession(
-      userToLogin,
-      new Date(new Date().getTime() + 24 * 60 * 60 * 1000),
-      originIpAddress,
-      userAgent,
-      ""
-    );
-    if (!createdSessionForUser) {
-      return new ReturnObjectHandler("Could not login user", null);
-    }
+    const userSession = await SessionRepository.getSessionByUser(userToLogin);
 
     return new ReturnObjectHandler("User was successfully logged in", {
-      user: {
-        userID: userToLogin.userID,
-        username: userToLogin.username,
-        firstName: userToLogin.firstName,
-        lastName: userToLogin.lastName,
-      },
-      session: {
-        sessionID: createdSessionForUser.sessionID,
-        authToken: createdSessionForUser.authToken,
-        crsfToken: createdSessionForUser.crsfToken,
-        expiresAt: createdSessionForUser.expiresAt,
-      },
+      user: userToLogin,
+      session: userSession,
     });
   }
   public static async loginUserWithPhoneNumber(
@@ -591,16 +573,6 @@ export default class UserService {
         null
       );
     }
-    const createdSessionForUser = await SessionService.createNewSession(
-      userToLogin,
-      new Date(new Date().getTime() + 24 * 60 * 60 * 1000),
-      originIpAddress,
-      userAgent,
-      ""
-    );
-    if (!createdSessionForUser) {
-      return new ReturnObjectHandler("Could not login user", null);
-    }
 
     return new ReturnObjectHandler("User was successfully logged in", {
       user: {
@@ -609,12 +581,6 @@ export default class UserService {
         firstName: userToLogin.firstName,
         lastName: userToLogin.lastName,
       },
-      session: {
-        sessionID: createdSessionForUser.sessionID,
-        authToken: createdSessionForUser.authToken,
-        crsfToken: createdSessionForUser.crsfToken,
-        expiresAt: createdSessionForUser.expiresAt,
-      },
     });
   }
   public static async getUserByEmail(email: string) {
@@ -622,5 +588,8 @@ export default class UserService {
   }
   public static async getUserPasswordByUser(user: User) {
     return await UserRepository.getPasswordByUser(user);
+  }
+  public static async getUserSaltByUser(user: User) {
+    return await UserRepository.getUserSaltByUser(user);
   }
 }

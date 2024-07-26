@@ -6,100 +6,74 @@ import UserSalt from "../../models/user.model/session.model";
 import UserSession from "../../models/user.model/session.model";
 import { MoreThan } from "typeorm";
 import ReturnObjectHandler from "../../utilities/returnObject.utility";
+import UserRepository from "./user.repository";
+import EncryptionHelpers from "../../helpers/encryption.helper";
+import UserService from "../../service/user.service/user.service";
 
 export default class SessionRepository {
-  public static async createNewSession(
+  public static async createSession(
     userToCreateSessionFor: User,
-    expiresAt: Date = new Date(new Date().getTime() + 24 * 60 * 60 * 1000),
-    initialIpAddress: string,
-    userAgent: string = "",
-    sessionData: string = null
-  ): Promise<UserSession | null> {
+    ttl: Date = new Date(new Date().getTime() + 24 * 60 * 60 * 1000),
+    initialIPAddress: string,
+    userAgent: string
+  ) {
     const newSession = new UserSession();
     newSession.sessionOwner = userToCreateSessionFor;
-    newSession.createdAt = new Date();
     newSession.lastActivityAt = new Date();
-    newSession.expiresAt = expiresAt;
-    newSession.ipAddressOfSessionInitialization = initialIpAddress;
-    newSession.lastIpAddressOfActivity = initialIpAddress;
+    newSession.expiresAt = ttl;
+    newSession.ipAddressOfSessionInitialization = initialIPAddress;
+    newSession.lastIpAddressOfActivity = initialIPAddress;
     newSession.userAgent = userAgent;
-    newSession.authToken = uuidv4();
-    newSession.crsfToken = uuidv4();
-    newSession.sessionData = sessionData;
-
-    await DatabaseConnection.getRepository(UserSession)
+    newSession.verificationToken = uuidv4();
+    const isSessionCreated = await DatabaseConnection.getRepository(UserSession)
       .save(newSession)
-      .then(() => {})
       .catch((error) => {
         console.log(
-          "[LOG-DATA] - " +
+          "[LOG - DATA] - " +
             new Date() +
-            " -> LOG::Error::SessionRepository::createNewSession::TryCatch Exception::Could not create new UserSession entity instance, error: " +
+            " - LOG::ERROR::SessionRepository::createSession::DatabaseConnection.save(newSession)::Failed to create new session, error message: " +
             error.message
         );
         return null;
       });
+    if (!isSessionCreated) {
+      return null;
+    }
     console.log(
-      "[LOG-DATA] - " +
+      "[LOG - DATA] - " +
         new Date() +
-        " -> LOG::Success::SessionRepository::createNewSession::Created new UserSession entity instance successfully, created UserSession object instance ID: " +
+        " - LOG::SUCCESS::SessionRepository::createSession::isSessionCreated::New session for user with ID: " +
+        userToCreateSessionFor.userID +
+        " was SUCCESSFULLY created with new session ID: " +
         newSession.sessionID
     );
     return newSession;
   }
-
-  public static async checkDoesUserHaveActiveSessionByUser(
-    userToCheckSessionFor: User
-  ): Promise<boolean> {
-    const checkSessionResult = await DatabaseConnection.getRepository(
-      UserSession
-    )
-      .findOne({
-        where: {
-          sessionOwner: userToCheckSessionFor,
-        },
-        relations: {
-          sessionOwner: true,
-        },
+  public static async deleteSession(sessionToDelete: UserSession) {
+    return await DatabaseConnection.getRepository(UserSession)
+      .remove(sessionToDelete)
+      .then(() => {
+        console.log(
+          "[LOG - DATA] - " +
+            new Date() +
+            " - LOG::SUCCESS::SessionRepository::deleteSession::DatabaseConnection.remove(sessionToDelete)::Session was successfully deleted from the database"
+        );
+        return true;
       })
-      .then(() => {})
       .catch((error) => {
         console.log(
-          "[LOG-DATA] - " +
+          "[LOG - DATA] - " +
             new Date() +
-            " -> LOG::ERROR::SessionRepository::checkDoesUserHaveActiveSessionByUser::Error occurred whilst finding active session for user with ID: " +
-            userToCheckSessionFor.userID +
-            ", error message: " +
+            " - LOG::ERROR::SessionRepository::deleteSession::DatabaseConnection.remove(sessionToDelete)::Error occured whilst deleting session, session wasn't deleted, error message: " +
             error.message
         );
         return false;
       });
-
-    if (!checkSessionResult) {
-      console.log(
-        "[LOG-DATA] - " +
-          new Date() +
-          " -> LOG::INFO::SessionRepository::checkDoesUserHaveActiveSessionByUser::Could not find active session for user with ID: " +
-          userToCheckSessionFor.userID +
-          "."
-      );
-      return false;
-    }
-    console.log(
-      "[LOG-DATA] - " +
-        new Date() +
-        " -> LOG::INFO::SessionRepository::checkDoesUserHaveActiveSessionByUser::Found active session for user with ID: " +
-        userToCheckSessionFor.userID
-    );
-    return true;
   }
-
-  public static async getSessionByUser(
-    userToGetSessionFor: User
-  ): Promise<UserSession | null> {
+  public static async getSessionByUser(user: User) {
     return await DatabaseConnection.getRepository(UserSession).findOne({
       where: {
-        sessionOwner: userToGetSessionFor,
+        sessionOwner: user,
       },
       relations: {
         sessionOwner: true,
@@ -107,47 +81,34 @@ export default class SessionRepository {
     });
   }
 
-  public static async setSessionExpiryTimeBySession(
-    sessionToSetExpiryTimeFor: UserSession,
-    newExpiresAtDateTime: Date = new Date(
-      new Date().getTime() + 24 * 60 * 60 * 1000
-    )
-  ): Promise<UserSession | null> {
-    sessionToSetExpiryTimeFor.expiresAt = newExpiresAtDateTime;
-    return await DatabaseConnection.getRepository(UserSession)
-      .save(sessionToSetExpiryTimeFor)
-      .then(() => {
-        console.log(
-          "[LOG - DATA] " +
-            new Date() +
-            " -> LOG::INFO::SessionRepository::setSessionExpiryTimeBySession::Successfully set new expiry time for session with ID: " +
-            sessionToSetExpiryTimeFor.sessionID +
-            ", new expiry time: " +
-            sessionToSetExpiryTimeFor.expiresAt
-        );
-        return sessionToSetExpiryTimeFor;
-      })
+  public static async refreshAuthenticationToken(tokenInSession: UserSession) {
+    const userSalt = await UserService.getUserSaltByUser(
+      tokenInSession.sessionOwner
+    );
+    const newToken = await EncryptionHelpers.hashPassword(userSalt.salt);
+    tokenInSession.authToken = newToken;
+    tokenInSession.lastActivityAt = new Date();
+    const updateSession = await DatabaseConnection.getRepository(UserSession)
+      .save(tokenInSession)
       .catch((error) => {
         console.log(
-          "[LOG - DATA] " +
+          "[LOG - DATA] - " +
             new Date() +
-            " -> LOG::ERROR::SessionRepository::setSessionExpiryTimeBySession::Failed to set new expiry time for session with ID: " +
-            sessionToSetExpiryTimeFor.sessionID +
-            ", error message" +
+            " - LOG::ERROR::SessionRepository::refreshAuthenticationToken::DatabaseConnection.save(tokenInSession)::Error occurred whilst updating session authentication token, session wasn't updated, error message: " +
             error.message
         );
         return null;
       });
-  }
-
-  public static async deleteSession(sessionToDelete: UserSession) {
-    return await DatabaseConnection.getRepository(UserSession)
-      .remove(sessionToDelete)
-      .then(() => {
-        return true;
-      })
-      .catch(() => {
-        return false;
-      });
+    if (!updateSession) {
+      return null;
+    }
+    console.log(
+      "[LOG - DATA] - " +
+        new Date() +
+        " - LOG::ERROR::SessionRepository::refreshAuthenticationToken::updateSession::Session " +
+        tokenInSession.sessionID +
+        " token was refreshed successfully"
+    );
+    return tokenInSession;
   }
 }

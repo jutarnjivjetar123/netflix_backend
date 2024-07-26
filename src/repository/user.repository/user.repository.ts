@@ -188,4 +188,15 @@ export default class UserRepository {
     );
     return searchResult;
   }
+
+  public static async getUserSaltByUser(user: User) {
+    return await DatabaseConnection.getRepository(UserSalt).findOne({
+      where: {
+        saltOwner: user,
+      },
+      relations: {
+        saltOwner: true,
+      },
+    });
+  }
 }

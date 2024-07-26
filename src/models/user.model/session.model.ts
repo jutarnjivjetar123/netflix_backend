@@ -41,11 +41,13 @@ export default class UserSession {
   @Column()
   userAgent: string;
 
-  @Column()
-  authToken: string;
+  @Column({
+    nullable: true,
+  })
+  authToken: string | null;
 
   @Column()
-  crsfToken: string;
+  verificationToken: string;
 
   @Column({
     nullable: true,

@@ -3,12 +3,14 @@ import express from "express";
 import UserService from "../../service/user.service/user.service";
 import UserMiddleware from "../../middleware/user.middleware";
 import DataParserMiddleware from "../../middleware/parser.middleware";
-import EncryptionHelpers from "helpers/encryption.helper";
+import EncryptionHelpers from "../../helpers/encryption.helper";
 import JWTHelper from "../../helpers/jwtokens.helpers";
 import { timeStamp } from "console";
 import UserRepository from "../../repository/user.repository/user.repository";
 import SessionRepository from "../../repository/user.repository/session.repository";
-import SessionService from "../../service/user.service/session.service";
+import UserSalt from "models/user.model/salt.model";
+import SessionMiddleware from "../../middleware/session.middleware";
+
 class UserRouter {
   public router: express.Router;
 
@@ -23,6 +25,7 @@ class UserRouter {
       "/login",
       DataParserMiddleware.conditionalParser,
       UserMiddleware.conditionalAuthentication,
+      SessionMiddleware.manageSession,
       this.loginUser
     );
   }
@@ -149,21 +152,19 @@ class UserRouter {
           timestamp: new Date(),
         });
       }
+      const userSalt = await UserService.getUserSaltByUser(
+        loginResult.returnValue.user
+      );
+      const token = await JWTHelper.generateToken(
+        {
+          token: loginResult.returnValue.session.authToken,
+          email: email,
+          id: EncryptionHelpers.generateSalt(12),
+        },
+        userSalt.salt
+      );
 
-      // const jwtTokenToReturn = JWTHelper.generateToken(
-      //   {
-      //     data: email,
-      //     id: loginResult.returnValue.session.sessionID,
-      //   },
-      //   loginResult.returnValue.session.authToken
-      // );
-      // console.log("JWT: " + jwtTokenToReturn);
-      // console.log(
-      //   "JWT decoded: " +
-      //     JSON.stringify(JWTHelper.decodeToken(jwtTokenToReturn))
-      // );
-      // res.cookie("Authorization", "Bearer " + jwtTokenToReturn);
-
+      res.cookie("Authentication", `Bearer ${token}`);
       return res.status(200).send({
         successState: true,
         message: loginResult.message,
@@ -178,11 +179,6 @@ class UserRouter {
           email: {
             email: email,
           },
-          // session: {
-          //   sessionID: loginResult.returnValue.session.sessionID,
-          //   authToken: loginResult.returnValue.session.authToken,
-          //   expiresAt: loginResult.returnValue.session.expiresAt,
-          // },
         },
       });
     }
@@ -220,8 +216,10 @@ class UserRouter {
         timestamp: new Date(),
       });
     }
-    res.cookie("authToken", loginResult.returnValue.session.authToken);
-
+    res.cookie(
+      "Authorization",
+      "Bearer" + loginResult.returnValue.session.authToken
+    );
     return res.status(200).send({
       successState: true,
       message: loginResult.message,
@@ -231,11 +229,6 @@ class UserRouter {
           username: loginResult.returnValue.user.username,
           firstName: loginResult.returnValue.user.firstName,
           lastName: loginResult.returnValue.user.lastName,
-        },
-        session: {
-          sessionID: loginResult.returnValue.session.sessionID,
-          authToken: loginResult.returnValue.session.authToken,
-          expiresAt: loginResult.returnValue.session.expiresAt,
         },
       },
     });
