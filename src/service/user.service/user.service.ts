@@ -526,11 +526,9 @@ export default class UserService {
         null
       );
     }
-    const userSession = await SessionRepository.getSessionByUser(userToLogin);
 
     return new ReturnObjectHandler("User was successfully logged in", {
       user: userToLogin,
-      session: userSession,
     });
   }
   public static async loginUserWithPhoneNumber(

@@ -26,31 +26,9 @@ export default class UserSession {
   @CreateDateColumn()
   createdAt: Date;
 
-  @UpdateDateColumn()
-  lastActivityAt: Date;
-
   @Column()
   expiresAt: Date;
 
   @Column()
-  ipAddressOfSessionInitialization: string;
-
-  @Column({})
-  lastIpAddressOfActivity: string;
-
-  @Column()
-  userAgent: string;
-
-  @Column({
-    nullable: true,
-  })
-  authToken: string | null;
-
-  @Column()
-  verificationToken: string;
-
-  @Column({
-    nullable: true,
-  })
-  sessionData: string;
+  refreshToken: string;
 }
