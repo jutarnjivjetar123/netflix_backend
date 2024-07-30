@@ -27,8 +27,12 @@ class UserRouter {
       SessionMiddleware.manageSession,
       this.login
     );
-    this.router.post("/protected", this.requestResource);
-    this.router.post("/refresh-token", this.validateRefreshToken);
+    this.router.post(
+      "/protected",
+      SessionMiddleware.authorizeUser,
+      this.requestResource
+    );
+    this.router.post("/refresh-token", this.refreshAccessToken);
   }
 
   private async registerUser(req: express.Request, res: express.Response) {
@@ -292,44 +296,45 @@ class UserRouter {
         timestamp: new Date(),
       });
     }
-    console.log(req);
+
     console.log(authorization);
     const token = authorization.split(" ")[1];
     console.log(token);
     const decodedToken = JWTHelper.decodeToken(token);
     const tokenInString = JSON.stringify(decodedToken);
+    console.log(JSON.parse(tokenInString));
     const email = JSON.parse(tokenInString).email;
 
     const user = await UserService.getUserByEmail(email);
-    if (!user) {
-      return res.status(403).send({
-        successState: false,
-        message: "User with email " + email + " not found",
-        timestamp: new Date(),
-      });
-    }
+    // if (!user) {
+    //   return res.status(403).send({
+    //     successState: false,
+    //     message: "User with email " + email + " not found",
+    //     timestamp: new Date(),
+    //   });
+    // }
     const session = await SessionRepository.getSessionByUser(user);
-    if (!session) {
-      res.redirect("http://localhost:5051/login.html");
-      return res.status(403).send({
-        successState: false,
-        message: "User with email " + email + " not logged in",
-        timestamp: new Date(),
-      });
-    }
+    // if (!session) {
+    //   res.redirect("http://localhost:5051/login.html");
+    //   return res.status(403).send({
+    //     successState: false,
+    //     message: "User with email " + email + " not logged in",
+    //     timestamp: new Date(),
+    //   });
+    // }
     const userSalt = await UserService.getUserSaltByUser(user);
-    const validatedToken = JWTHelper.getValidToken(token, userSalt.salt);
-    if (
-      validatedToken === "Token has expired" ||
-      validatedToken === "Token is invalid" ||
-      !validatedToken
-    ) {
-      return res.status(403).send({
-        successState: false,
-        message: validatedToken,
-        timestamp: new Date(),
-      });
-    }
+    // const validatedToken = JWTHelper.getValidToken(token, userSalt.salt);
+    // if (
+    //   validatedToken === "Token has expired" ||
+    //   validatedToken === "Token is invalid" ||
+    //   !validatedToken
+    // ) {
+    //   return res.status(403).send({
+    //     successState: false,
+    //     message: validatedToken,
+    //     timestamp: new Date(),
+    //   });
+    // }
     const accessToken = JWTHelper.generateToken(
       {
         userID: user.userID,
@@ -338,6 +343,7 @@ class UserRouter {
       userSalt.salt,
       "8h"
     );
+
     res.setHeader("Authorization", `Bearer ${accessToken}`);
     return res.status(200).send({
       successState: true,
@@ -349,7 +355,7 @@ class UserRouter {
     });
   }
 
-  private async validateRefreshToken(
+  private async refreshAccessToken(
     req: express.Request,
     res: express.Response
   ) {
@@ -391,7 +397,13 @@ class UserRouter {
       jsonData[3].salt,
       "8h"
     );
+    const newRefreshToken = SessionRepository.updateRefreshTokenByUserID(
+      jsonData[0].userID,
+      jsonData[3].salt
+    );
+
     res.header("Authorization", "Bearer " + accessToken);
+    res.header("Refresh-Token", "Bearer " + newRefreshToken);
     return res.status(200).send({
       successState: true,
       message: "Refreshed access token successfully",

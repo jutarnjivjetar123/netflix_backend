@@ -71,7 +71,23 @@ export default class SessionRepository {
     );
     return session.refreshToken;
   }
-
+  public static updateRefreshTokenByUserID(userID: string, userSalt: string) {
+    const newRefreshToken = JWTHelper.generateToken(
+      {
+        userID,
+      },
+      userSalt,
+      "30d"
+    );
+    const session = DatabaseConnection.getRepository(UserSession)
+      .createQueryBuilder("session")
+      .update(UserSession)
+      .set({
+        refreshToken: newRefreshToken,
+      })
+      .where("session.userID = :userID", { userID });
+    return newRefreshToken;
+  }
   public static async deleteSession(session) {
     return await DatabaseConnection.getRepository(UserSession)
       .remove(session)
@@ -119,7 +135,21 @@ export default class SessionRepository {
         "user.userID = salt.saltOwnerUserID"
       )
       .getRawMany();
-
+    searchResult.forEach((result) => {
+      if (
+        !result.hasOwnProperty("user_userID") ||
+        !result.user_userID === null
+      ) {
+        return null;
+      }
+      if (
+        !result.hasOwnProperty("session_sessionID") ||
+        !result.session_sessionID === null ||
+        result.session_expiresAt < new Date()
+      ) {
+        return null;
+      }
+    });
     console.log(searchResult);
     const returnValues = [];
     searchResult.forEach((result) => {

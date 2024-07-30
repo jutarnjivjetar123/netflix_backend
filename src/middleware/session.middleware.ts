@@ -41,4 +41,66 @@ export default class SessionMiddleware {
 
     next();
   }
+
+  public static async authorizeUser(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
+    const authorization = req.headers.authorization;
+    if (!authorization || authorization.length < 1) {
+      return res.status(403).send({
+        successState: false,
+        message: "Invalid access token",
+        timestamp: new Date(),
+      });
+    }
+
+    const token: string = authorization.split(" ")[1];
+    const decodedToken = JWTHelper.decodeToken(token);
+    if (!decodedToken) {
+      return res.status(403).send({
+        successState: false,
+        message: "Invalid access token",
+        timestamp: new Date(),
+      });
+    }
+    const tokenInJSON = JSON.parse(JSON.stringify(token));
+    const userId = tokenInJSON.userID;
+    const loginData = await SessionRepository.getLoginDataForUserByUserID(
+      userId
+    );
+    if (!loginData) {
+      return res.status(403).send({
+        successState: false,
+        message: "User not logged in",
+        redirectLink: "http://localhost:5051/login.html",
+        timestamp: new Date(),
+      });
+    }
+    console.log("Login data: " + JSON.stringify(loginData));
+    const stringLoginData = JSON.stringify(loginData);
+    const jsonLoginData = JSON.parse(stringLoginData);
+    console.log(jsonLoginData[0]);
+    console.log(jsonLoginData[1]);
+    console.log(jsonLoginData[2]);
+    console.log(jsonLoginData[3]);
+    const validatedToken = JWTHelper.getValidToken(
+      token,
+      jsonLoginData[3].salt
+    );
+    if (
+      validatedToken === "Token has expired" ||
+      validatedToken === "Token is invalid" ||
+      !validatedToken
+    ) {
+      return res.status(403).send({
+        successState: false,
+        message: validatedToken,
+        timestamp: new Date(),
+      });
+    }
+
+    next();
+  }
 }
