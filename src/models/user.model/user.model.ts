@@ -4,8 +4,11 @@ import {
   Generated,
   Column,
   PrimaryColumn,
+  OneToOne,
+  JoinColumn,
 } from "typeorm";
 
+import UserEmail from "../user.model/email.model";
 @Entity("Users", {
   schema: "Users",
 })

@@ -18,8 +18,8 @@ export default class UserEmail {
   @PrimaryGeneratedColumn("uuid")
   emailID: number;
 
-  @OneToOne(() => User)
-  @JoinColumn()
+  @OneToOne((type) => User, {})
+  @JoinColumn({ name: "userUserID" })
   user: User;
 
   @Column()

@@ -7,6 +7,8 @@ import DataParserMiddleware from "../../middleware/parser.middleware";
 import EncryptionHelpers from "../../helpers/encryption.helper";
 import SessionRepository from "../../repository/user.repository/session.repository";
 import JWTHelper from "../../helpers/jwtokens.helpers";
+import { FaWineGlassEmpty } from "react-icons/fa6";
+import UserSession from "models/user.model/session.model";
 
 class UserRouter {
   public router: express.Router;
@@ -25,6 +27,8 @@ class UserRouter {
       SessionMiddleware.manageSession,
       this.login
     );
+    this.router.post("/protected", this.requestResource);
+    this.router.post("/refresh-token", this.validateRefreshToken);
   }
 
   private async registerUser(req: express.Request, res: express.Response) {
@@ -262,6 +266,7 @@ class UserRouter {
     const session = await SessionRepository.getSessionByUser(user);
     const userSalt = await UserService.getUserSaltByUser(user);
     res.cookie("refresh-token", session.refreshToken);
+
     const accessToken = JWTHelper.generateToken(
       {
         userID: user.userID,
@@ -274,6 +279,122 @@ class UserRouter {
     return res.status(200).send({
       successState: true,
       message: "Welcome back " + email,
+      timestamp: new Date(),
+    });
+  }
+
+  private async requestResource(req: express.Request, res: express.Response) {
+    const authorization = req.headers["authorization"];
+    if (!authorization) {
+      return res.status(403).send({
+        successState: false,
+        message: "Invalid access token",
+        timestamp: new Date(),
+      });
+    }
+    console.log(req);
+    console.log(authorization);
+    const token = authorization.split(" ")[1];
+    console.log(token);
+    const decodedToken = JWTHelper.decodeToken(token);
+    const tokenInString = JSON.stringify(decodedToken);
+    const email = JSON.parse(tokenInString).email;
+
+    const user = await UserService.getUserByEmail(email);
+    if (!user) {
+      return res.status(403).send({
+        successState: false,
+        message: "User with email " + email + " not found",
+        timestamp: new Date(),
+      });
+    }
+    const session = await SessionRepository.getSessionByUser(user);
+    if (!session) {
+      res.redirect("http://localhost:5051/login.html");
+      return res.status(403).send({
+        successState: false,
+        message: "User with email " + email + " not logged in",
+        timestamp: new Date(),
+      });
+    }
+    const userSalt = await UserService.getUserSaltByUser(user);
+    const validatedToken = JWTHelper.getValidToken(token, userSalt.salt);
+    if (
+      validatedToken === "Token has expired" ||
+      validatedToken === "Token is invalid" ||
+      !validatedToken
+    ) {
+      return res.status(403).send({
+        successState: false,
+        message: validatedToken,
+        timestamp: new Date(),
+      });
+    }
+    const accessToken = JWTHelper.generateToken(
+      {
+        userID: user.userID,
+        email: email,
+      },
+      userSalt.salt,
+      "8h"
+    );
+    res.setHeader("Authorization", `Bearer ${accessToken}`);
+    return res.status(200).send({
+      successState: true,
+      message: "Requested resource sent",
+      data: {
+        dogName: "Rex",
+      },
+      timestamp: new Date(),
+    });
+  }
+
+  private async validateRefreshToken(
+    req: express.Request,
+    res: express.Response
+  ) {
+    const authorization = req.headers.authorization;
+    if (!authorization) {
+      return res.status(400).send({
+        successState: false,
+        message: "No refresh token was provided",
+        timestamp: new Date(),
+      });
+    }
+
+    const token = JWTHelper.decodeToken(authorization.split(" ")[1]);
+    if (!token) {
+      return res.status(401).send({
+        successState: false,
+        message: "Invalid refresh token",
+        timestamp: new Date(),
+      });
+    }
+    const tokenInJSON = JSON.parse(JSON.stringify(token));
+    const userId = tokenInJSON.userID;
+
+    const loginData = await SessionRepository.getLoginDataForUserByUserID(
+      userId
+    );
+    console.log("Login data: " + JSON.stringify(loginData));
+    const stringLoginData = JSON.stringify(loginData);
+    const jsonData = JSON.parse(stringLoginData);
+    console.log(jsonData[0]);
+    console.log(jsonData[1]);
+    console.log(jsonData[2]);
+    console.log(jsonData[3]);
+    const accessToken = JWTHelper.generateToken(
+      {
+        userID: jsonData[0].userID,
+        email: jsonData[1].email,
+      },
+      jsonData[3].salt,
+      "8h"
+    );
+    res.header("Authorization", "Bearer " + accessToken);
+    return res.status(200).send({
+      successState: true,
+      message: "Refreshed access token successfully",
       timestamp: new Date(),
     });
   }
