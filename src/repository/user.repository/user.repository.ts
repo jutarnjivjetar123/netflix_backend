@@ -3,200 +3,223 @@ import UserEmail from "../../models/user.model/email.model";
 import UserPhoneNumber from "../../models/user.model/phone.model";
 import UserPassword from "../../models/user.model/password.model";
 import UserSalt from "../../models/user.model/salt.model";
+import UserSession from "../../models/user.model/session.model";
 import { DatabaseConnection } from "../../database/config.database";
 import EncryptionHelpers from "../../helpers/encryption.helper";
 import ReturnObjectHandler from "../../utilities/returnObject.utility";
 import { PhoneNumberHelper } from "../../helpers/phoneNumber.helpers";
-import { ILike } from "typeorm";
 
 export default class UserRepository {
-  public static async createNewUser_DefaultForEmailCreation(
-    firstName: string = null,
-    lastName: string = null,
-    username: string = null,
-    usedEmailToSignUp: boolean = true
-  ) {
-    const newUser = new User();
-    newUser.firstName = firstName;
-    newUser.lastName = lastName;
-    newUser.username = username;
-    newUser.usedEmailToSignUp = usedEmailToSignUp;
-    newUser.createdAt = new Date();
-
-    const userCreationResult = await DatabaseConnection.getRepository(
-      User
-    ).save(newUser);
-
-    if (!userCreationResult) {
-      return new ReturnObjectHandler(
-        "Could not create a new user with the provided data",
-        null
-      );
-    }
-    return new ReturnObjectHandler(
-      "User create successfully with following data: " +
-        JSON.stringify({
-          username: newUser.username,
-          firstName: newUser.firstName,
-          lastName: newUser.lastName,
-          usedEmailToSignUp: newUser.usedEmailToSignUp,
-        }),
-      newUser
+  public static async doesUserExistWithEmail(email: string): Promise<boolean> {
+    const foundUser = await DatabaseConnection.getRepository(UserEmail).findOne(
+      {
+        where: {
+          email: email,
+        },
+        relations: {
+          user: true,
+        },
+      }
     );
+    return foundUser !== null;
   }
 
-  public static async createNewUserEmail(
-    email: string,
-    userToCreateEmailFor: User
-  ) {
-    const newEmail = new UserEmail();
-    newEmail.user = userToCreateEmailFor;
-    newEmail.email = email;
-    newEmail.createdAt = new Date();
-
-    const emailCreationResult = await DatabaseConnection.getRepository(
-      UserEmail
-    ).save(newEmail);
-    if (!emailCreationResult) {
-      return null;
-    }
-
-    return newEmail;
-  }
-
-  public static async createNewUserPhoneNumber(
-    phoneNumber: string,
-    userToCreatePhoneNumberFor: User,
-    countryCode: string = null,
-    region: string = null
-  ) {
-    const newPhoneNumber = new UserPhoneNumber();
-    newPhoneNumber.phoneNumber = phoneNumber;
-    newPhoneNumber.user = userToCreatePhoneNumberFor;
-    newPhoneNumber.internationalCallingCode = countryCode;
-    newPhoneNumber.createdAt = new Date();
-
-    return await DatabaseConnection.getRepository(UserPhoneNumber)
-      .save(newPhoneNumber)
-      .then(() => {
-        return new ReturnObjectHandler(
-          "Created new phone number: " +
-            newPhoneNumber.phoneNumber +
-            " for user: " +
-            newPhoneNumber.user,
-          newPhoneNumber
-        );
-      })
-      .catch((error) => {
-        return new ReturnObjectHandler(
-          "Failed to create new phone number " +
-            phoneNumber +
-            "error reason: " +
-            error,
-          null
-        );
-      });
-  }
-
-  public static async createUserPassword(
-    passwordHash: string,
-    userToCreatePasswordFor: User
-  ) {
-    const newPassword = new UserPassword();
-    newPassword.salt = await EncryptionHelpers.generateSalt();
-    newPassword.hash = passwordHash;
-    newPassword.createdAt = new Date();
-    newPassword.user = userToCreatePasswordFor;
-
-    const passwordCreationResult = await DatabaseConnection.getRepository(
-      UserPassword
-    ).save(newPassword);
-    if (!passwordCreationResult) {
-      return null;
-    }
-    return newPassword;
-  }
-
-  public static async createNewUserSalt(createSaltForUser: User) {
-    const newSalt = new UserSalt();
-    newSalt.salt = await EncryptionHelpers.generateSalt();
-    newSalt.createdAt = new Date();
-    newSalt.saltOwner = createSaltForUser;
-
-    const newSaltCreationResult = await DatabaseConnection.getRepository(
-      UserSalt
-    ).save(newSalt);
-    if (!newSaltCreationResult) {
-      return null;
-    }
-    return newSalt;
-  }
-
-  public static async getUserByEmail(email: string) {
-    const userByEmail = await DatabaseConnection.getRepository(
-      UserEmail
-    ).findOne({
-      where: {
-        email: email,
-      },
-      relations: {
-        user: true,
-      },
-    });
-    if (!userByEmail) return null;
-    return userByEmail.user;
-  }
-
-  public static async getUserByPhoneNumber(
+  public static async doesUserExistWithPhoneNumber(
     phoneNumber: string,
     countryCode: string = null
   ) {
-    const searchResult = await DatabaseConnection.getRepository(
-      UserPhoneNumber
-    ).findOne({
-      where: {
-        phoneNumber: ILike(phoneNumber),
-        internationalCallingCode: countryCode,
-      },
-      relations: {
-        user: true,
-      },
-    });
+    let foundUser;
 
-    return searchResult ? searchResult.user : null;
-  }
-
-  public static async getPasswordByUser(findPasswordForUser: User) {
-    const searchResult = await DatabaseConnection.getRepository(
-      UserPassword
-    ).findOne({
-      where: {
-        user: findPasswordForUser,
-      },
-      relations: {
-        user: true,
-      },
-    });
-
-    console.log(
-      new Date() +
-        " -> LOG::Info::UserRepository::getPasswordByUser::searchResult::Database search result for user with ID: " +
-        findPasswordForUser.userID +
-        (searchResult
-          ? " found password object"
-          : " didn't find password object")
+    foundUser = await DatabaseConnection.getRepository(UserPhoneNumber).findOne(
+      {
+        where: {
+          phoneNumber: phoneNumber,
+          internationalCallingCode: countryCode,
+        },
+        relations: {
+          user: true,
+        },
+      }
     );
-    return searchResult;
+    if (!foundUser) {
+      foundUser = await DatabaseConnection.getRepository(
+        UserPhoneNumber
+      ).findOne({
+        where: {
+          phoneNumber: phoneNumber,
+        },
+        relations: {
+          user: true,
+        },
+      });
+    }
+    return foundUser !== null ? true : false;
+  }
+  //Function to create new User entity, along with that creates UserEmail, UserPassword, UserSalt objects that have a one to one relationship with the created User entity, relation is connected using userID
+  public static async createNewUser(
+    username: string,
+    firstName: string,
+    lastName: string
+  ) {
+    const newUser = new User();
+    newUser.username = username;
+    newUser.firstName = firstName;
+    newUser.lastName = lastName;
+    newUser.usedEmailToSignUp = true;
+    newUser.createdAt = new Date();
+    const createdUser = await DatabaseConnection.getRepository(User)
+      .save(newUser)
+      .then((result) => {
+        console.log(
+          "[LOG - DATA] - " +
+            new Date() +
+            " -> LOG::Success::UserRepository::createNewUserWithEmail::New user with user ID: " +
+            result.userID +
+            " was successfully created"
+        );
+        return result;
+      })
+      .catch((error) => {
+        console.log(
+          "[LOG - DATA] - " +
+            new Date() +
+            " -> LOG::Error::UserRepository::createNewUserWithEmail::Could not create new user, erorr: " +
+            error.message
+        );
+        return null;
+      });
+    if (!createdUser) {
+      return null;
+    }
+
+    return newUser;
+  }
+  public static async createEmailByUser(user: User, newEmail: string) {
+    const email = new UserEmail();
+    email.email = newEmail;
+    email.createdAt = new Date();
+    email.user = user;
+    return await DatabaseConnection.getRepository(UserEmail)
+      .save(email)
+      .then((result) => {
+        console.log(
+          "[LOG - DATA] - " +
+            new Date() +
+            " - LOG::Success::UserRepository::createEmailByUser::New email was created for user with id: " +
+            user.userID +
+            ", new email object: " +
+            JSON.stringify(email)
+        );
+        return result;
+      })
+      .catch((error) => {
+        console.log(
+          "[LOG - DATA] - " +
+            new Date() +
+            "- LOG::Error::UserRepository::createEmailByUser::Failed to create a new email for user with id: " +
+            user.userID +
+            ", error: " +
+            error.message
+        );
+        return null;
+      });
   }
 
-  public static async getUserSaltByUser(user: User) {
-    return await DatabaseConnection.getRepository(UserSalt).findOne({
-      where: {
-        saltOwner: user,
-      },
-      relations: {
-        saltOwner: true,
-      },
-    });
+  public static async createPhoneNumberByUser(
+    user: User,
+    newPhoneNumber: string,
+    countryCode: string = null
+  ) {
+    const phoneNumber = new UserPhoneNumber();
+    phoneNumber.phoneNumber = newPhoneNumber;
+    phoneNumber.internationalCallingCode = countryCode;
+    phoneNumber.user = user;
+    phoneNumber.createdAt = new Date();
+    return await DatabaseConnection.getRepository(UserPhoneNumber)
+      .save(phoneNumber)
+      .then((result) => {
+        console.log(
+          "[LOG - DATA] - " +
+            new Date() +
+            " - LOG::Success::UserRepository::createPhoneNumberByUser::New phone number was created for user with id: " +
+            user.userID +
+            ", new phone number object: " +
+            JSON.stringify(phoneNumber)
+        );
+        return result;
+      })
+      .catch((error) => {
+        console.log(
+          "[LOG - DATA] - " +
+            new Date() +
+            "- LOG::Error::UserRepository::createPhoneNumberByUser::Failed to create a new phone number for user with id: " +
+            user.userID +
+            ", error: " +
+            error.message
+        );
+        return null;
+      });
+  }
+  public static async createPasswordByUser(user: User, newPassword: string) {
+    const password = new UserPassword();
+    password.hash = await EncryptionHelpers.hashPassword(newPassword);
+    password.salt = await EncryptionHelpers.generateSalt();
+    password.createdAt = new Date();
+    password.user = user;
+    return await DatabaseConnection.getRepository(UserPassword)
+      .save(password)
+      .then((result) => {
+        console.log(
+          "[LOG - DATA] - " +
+            new Date() +
+            " - LOG::Success::UserRepository::createPasswordByUser::New password was created for user with id: " +
+            user.userID +
+            ", new password object: " +
+            JSON.stringify(password)
+        );
+        return result;
+      })
+      .catch((error) => {
+        console.log(
+          "[LOG - DATA] - " +
+            new Date() +
+            "- LOG::Error::UserRepository::createPasswordByUser::Failed to create a new password for user with id: " +
+            user.userID +
+            ", error: " +
+            error.message
+        );
+        return null;
+      });
+  }
+
+  public static async createSaltByUser(user: User) {
+    const salt = new UserSalt();
+    salt.salt = await EncryptionHelpers.generateSalt();
+    salt.saltOwner = user;
+    salt.createdAt = new Date();
+    return await DatabaseConnection.getRepository(UserSalt)
+      .save(salt)
+      .then((result) => {
+        console.log(
+          "[LOG - DATA] - " +
+            new Date() +
+            " - LOG::Success::UserRepository::createSaltByUser::New salt was created for user with id: " +
+            user.userID +
+            ", new salt object: " +
+            JSON.stringify(salt)
+        );
+        return result;
+      })
+      .catch((error) => {
+        console.log(
+          "[LOG - DATA] - " +
+            new Date() +
+            "- LOG::Error::UserRepository::createSaltByUser::Failed to create a new salt for user with id: " +
+            user.userID +
+            ", error: " +
+            error.message
+        );
+        return null;
+      });
   }
 }

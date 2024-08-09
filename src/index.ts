@@ -7,7 +7,6 @@ import {
   DatabaseConnection,
 } from "./database/config.database";
 import UserRouter from "./routes/user/user.routes";
-import DevRouter from "../src/routes/test/test.routes";
 import { PhoneNumberUtil } from "google-libphonenumber";
 const app = express();
 const port = process.env.DEFAULT_PORT || 3000;
@@ -21,7 +20,6 @@ app.use(express.json());
 app.use(cors());
 
 app.use("/user", UserRouter);
-app.use("/dev", DevRouter);
 
 app.get("/checkStatus", (req: express.Request, res: express.Response) => {
   return res.status(200).send({
