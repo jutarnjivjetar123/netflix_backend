@@ -4,6 +4,7 @@ import { DatabaseConnection } from "../../database/config.database";
 import User from "../../models/user.model/user.model";
 import UserSalt from "../../models/user.model/salt.model";
 import UserSession from "../../models/user.model/session.model";
+import UserPassword from "../../models/user.model/password.model";
 import { MoreThan } from "typeorm";
 import ReturnObjectHandler from "../../utilities/returnObject.utility";
 import UserRepository from "./user.repository";
@@ -189,5 +190,71 @@ export default class SessionRepository {
 
     console.log(returnValues);
     return returnValues;
+  }
+
+  public static async getLoginDataForUserByEmail(email: string): Promise<{
+    user: User;
+    emailObject: UserEmail;
+    password: UserPassword;
+    salt: UserSalt;
+    session: UserSession;
+  } | null> {
+    console.log("Getting data for user with email: " + email);
+    const result = await DatabaseConnection.getRepository(User)
+      .createQueryBuilder("user")
+      .innerJoinAndSelect(UserEmail, "email", "user.userID = email.userUserID")
+      .innerJoinAndSelect(
+        UserPassword,
+        "password",
+        "user.userID = password.userUserID"
+      )
+      .innerJoinAndSelect(
+        UserSalt,
+        "salt",
+        "user.userID = salt.saltOwnerUserID"
+      )
+      .leftJoinAndSelect(
+        UserSession,
+        "session",
+        "user.userID = session.sessionOwnerUserID"
+      )
+      .where("email = :email", { email })
+      .getRawOne();
+
+    const user = new User();
+    const emailObject = new UserEmail();
+    const password = new UserPassword();
+    const salt = new UserSalt();
+    const session = new UserSession();
+
+    for (const key in result) {
+      if (key.startsWith("user_")) {
+        const attribute = key.replace("user_", "");
+        user[attribute] = result[key];
+      }
+      if (key.startsWith("email_")) {
+        const attribute = key.replace("email_", "");
+        emailObject[attribute] = result[key];
+      }
+      if (key.startsWith("password_")) {
+        const attribute = key.replace("password_", "");
+        password[attribute] = result[key];
+      }
+      if (key.startsWith("salt_")) {
+        const attribute = key.replace("salt_", "");
+        salt[attribute] = result[key];
+      }
+      if (key.startsWith("session_")) {
+        const attribute = key.replace("session_", "");
+        session[attribute] = result[key];
+      }
+    }
+    
+    console.log(user);
+    console.log(emailObject);
+    console.log(password);
+    console.log(salt);
+    console.log(session);
+    return { user, emailObject, password, salt, session };
   }
 }

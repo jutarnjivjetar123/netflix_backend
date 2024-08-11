@@ -78,6 +78,13 @@ class UserRouter {
       });
     }
     if (phoneNumber && !email) {
+      if (!countryCode) {
+        return res.status(400).send({
+          successState: false,
+          message: "Country code must be provided",
+          timestamp: new Date(),
+        });
+      }
       try {
         const newUser = await UserService.registerUserWithPhoneNumber(
           phoneNumber,
@@ -229,7 +236,34 @@ class UserRouter {
   //Function to retrieve dashboard data, for user based on the data from authentication token provided inside the request
   //Extracts token, reviews if it is valid, if it is updates the token value, extracts userId from token, and checks database for active user session, and returns session, checks if the provided session ID inside the token is valid, if it is, returns neccessary data for dashboard (dashboard data is personalized for every user based on their watching needs)
 
-  private async login(req: express.Request, res: express.Response) {}
+  private async login(req: express.Request, res: express.Response) {
+    const { email, phoneNumber, countryCode, password } = req.body;
+    if (!email && !phoneNumber && !countryCode) {
+      return res.status(400).send({
+        successState: false,
+        message: "No email or phone number was provided",
+        timestamp: new Date(),
+      });
+    }
+    if (email && !phoneNumber) {
+      let loginResult;
+      try {
+        loginResult = await UserService.loginUserWithEmail(email, password);
+      } catch (error) {
+        return res.status(404).send({
+          successState: false,
+          message: error.message,
+          timestamp: new Date(),
+        });
+      }
+
+      return res.status(200).send({
+        successState: true,
+        message: "Welcome back, " + email,
+        timestamp: new Date(),
+      });
+    }
+  }
 }
 
 export default new UserRouter().router;

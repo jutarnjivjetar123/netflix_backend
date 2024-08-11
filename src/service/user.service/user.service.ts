@@ -132,7 +132,7 @@ export default class UserService {
 
   public static async registerUserWithPhoneNumber(
     phoneNumber: string,
-    countryCode: string = null,
+    countryCode: string,
     password: string,
     firstName: string,
     lastName: string,
@@ -159,7 +159,7 @@ export default class UserService {
     if (
       await UserRepository.doesUserExistWithPhoneNumber(
         nationalPhoneNumber,
-        countryCodeForPhoneNumber
+        countryCode
       )
     ) {
       throw new Error("Phone number is taken");
@@ -181,7 +181,7 @@ export default class UserService {
     const newPhoneNumber = await UserRepository.createPhoneNumberByUser(
       newUser,
       nationalPhoneNumber,
-      countryCodeForPhoneNumber
+      countryCode
     );
     if (!newPhoneNumber) {
       console.log(
@@ -215,5 +215,16 @@ export default class UserService {
       return null;
     }
     return newUser;
+  }
+
+  public static async loginUserWithEmail(email: string, password: string) {
+    //Get user object, along with email, password, salt, and session object
+    const loginData = await SessionRepository.getLoginDataForUserByEmail(email);
+    console.log("Login data: " + JSON.stringify(loginData));
+    console.log(loginData.user.userID);
+    if (loginData.user.userID === undefined) {
+      throw new Error("User with " + email + " not found");
+    }
+    return loginData;
   }
 }
