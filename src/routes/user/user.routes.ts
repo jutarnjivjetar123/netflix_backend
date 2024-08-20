@@ -8,6 +8,7 @@ import SessionRepository from "../../repository/user.repository/session.reposito
 import JWTHelper from "../../helpers/jwtokens.helpers";
 import UserRepository from "../../repository/user.repository/user.repository";
 import { count } from "console";
+import EncryptionHelpers from "../../helpers/encryption.helper";
 
 class UserRouter {
   public router: express.Router;
@@ -20,6 +21,11 @@ class UserRouter {
   private routes(): void {
     this.router.post("/register", this.registerUser);
     this.router.post("/login", this.login);
+    this.router.post(
+      "/protected",
+      SessionMiddleware.checkAuthorization,
+      this.getProtectedData
+    );
   }
 
   private async registerUser(req: express.Request, res: express.Response) {
@@ -245,6 +251,13 @@ class UserRouter {
         timestamp: new Date(),
       });
     }
+    if (phoneNumber && !countryCode) {
+      return res.status(400).send({
+        successState: false,
+        message: "Country code must be provided",
+        timestamp: new Date(),
+      });
+    }
     if (email && !phoneNumber) {
       let loginResult;
       try {
@@ -256,13 +269,71 @@ class UserRouter {
           timestamp: new Date(),
         });
       }
-
+      const token = JWTHelper.generateToken(
+        {
+          sessionID: loginResult.session.sessionID,
+          id: await EncryptionHelpers.generateSalt(12),
+        },
+        loginResult.salt.salt
+      );
+      res.header("Authorization", "Bearer " + token);
+      res.header("Refresh-Token", "Bearer " + loginResult.session.refreshToken);
       return res.status(200).send({
         successState: true,
         message: "Welcome back, " + email,
+        data: {
+          email: loginResult.emailObject.email,
+          phoneNumber: null,
+          username: loginResult.user.username,
+          firstName: loginResult.user.firstName,
+          lastName: loginResult.user.lastName,
+        },
         timestamp: new Date(),
       });
     }
+    if (phoneNumber && countryCode && !email) {
+      let loginResult;
+      try {
+        loginResult = await UserService.loginUserWithPhoneNumber(
+          phoneNumber,
+          countryCode,
+          password
+        );
+      } catch (error) {
+        return res.status(400).send({
+          successState: false,
+          message: error.message,
+          timestamp: new Date(),
+        });
+      }
+
+      const token = JWTHelper.generateToken(
+        {
+          token: loginResult.session.refreshToken,
+          phone:
+            loginResult.phone.internationalCallingCode +
+            " " +
+            loginResult.phone.phoneNumber,
+          id: EncryptionHelpers.generateSalt(12),
+        },
+        loginResult.salt.salt
+      );
+      res.header("Authorization", "Bearer " + token);
+      res.header("Refresh-Token", "Bearer " + loginResult.session.refreshToken);
+      return res.status(200).send({
+        successState: true,
+        message: "Welcome back, " + phoneNumber,
+        data: loginResult,
+        timestamp: new Date(),
+      });
+    }
+  }
+  private async getProtectedData(req: express.Request, res: express.Response) {
+    return res.status(200).send({
+      successState: true,
+      message: "The protected data",
+      timestamp: new Date(),
+    });
   }
 }
 

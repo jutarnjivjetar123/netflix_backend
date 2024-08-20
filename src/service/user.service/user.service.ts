@@ -138,31 +138,30 @@ export default class UserService {
     lastName: string,
     username: string
   ) {
+    //TODO: parse phone number, and validate it, if it is valid phone number, check does it have country code inside the phoneNumber parameter variable, if it does, extract only the phone number ie. national number, and then is the phone number taken, if it is not then register user, if it is then throw exception 'Phone number taken'
+
     let parsedPhoneNumber;
     try {
       parsedPhoneNumber =
         PhoneNumberHelper.parsePhoneNumberFromString(phoneNumber);
     } catch (error) {
-      throw new Error(error);
+      throw new Error(error.message);
     }
-    let nationalPhoneNumber;
-    let countryCodeForPhoneNumber;
-    if (typeof parsedPhoneNumber === "string") {
-      nationalPhoneNumber = parsedPhoneNumber;
-      countryCodeForPhoneNumber = null;
-    }
+    let nationalNumber;
     if (typeof parsedPhoneNumber !== "string") {
-      nationalPhoneNumber = parsedPhoneNumber.getNationalNumber();
-      countryCodeForPhoneNumber = parsedPhoneNumber.getCountryCode();
+      nationalNumber = parsedPhoneNumber.getNationalNumber();
     }
-
+    if (typeof parsedPhoneNumber === "string") {
+      nationalNumber = parsedPhoneNumber;
+    }
+    console.log(nationalNumber);
     if (
       await UserRepository.doesUserExistWithPhoneNumber(
-        nationalPhoneNumber,
+        nationalNumber,
         countryCode
       )
     ) {
-      throw new Error("Phone number is taken");
+      throw new Error("Phone number taken");
     }
     const newUser = await UserRepository.createNewUser(
       username,
@@ -180,7 +179,7 @@ export default class UserService {
     //Phone number object
     const newPhoneNumber = await UserRepository.createPhoneNumberByUser(
       newUser,
-      nationalPhoneNumber,
+      nationalNumber,
       countryCode
     );
     if (!newPhoneNumber) {
@@ -220,10 +219,119 @@ export default class UserService {
   public static async loginUserWithEmail(email: string, password: string) {
     //Get user object, along with email, password, salt, and session object
     const loginData = await SessionRepository.getLoginDataForUserByEmail(email);
-    console.log("Login data: " + JSON.stringify(loginData));
-    console.log(loginData.user.userID);
+
     if (loginData.user.userID === undefined) {
-      throw new Error("User with " + email + " not found");
+      throw new Error("User with not found");
+    }
+    if (loginData.session) {
+      if (!(await SessionRepository.deleteSession(loginData.session))) {
+        console.log(
+          "[LOG - DATA] - " +
+            new Date() +
+            " -> LOG::Error::UserService::Delete session if statement::Could not delete session with session ID: " +
+            loginData.session.sessionID,
+          " check SessionRepository logs for more information"
+        );
+        throw new Error("Could not login user");
+      }
+      console.log(
+        "[LOG - DATA] - " +
+          new Date() +
+          " -> LOG::Success:UserService::loginUserWithEmail::Delete session if statement:: Successfully deleted session for user with ID: " +
+          loginData.user.userID
+      );
+    }
+    loginData.session = await SessionRepository.createSession(loginData.user);
+
+    if (
+      !(await EncryptionHelpers.validatePassword(
+        password,
+        loginData.password.hash
+      ))
+    ) {
+      console.log(
+        "[LOG - DATA] - " +
+          new Date() +
+          " -> LOG::Error::UserService::loginUserWithEmail::Access denied for user with ID: " +
+          loginData.user.userID +
+          ", incorrect password"
+      );
+      throw new Error("Invalid password");
+    }
+
+    return loginData;
+  }
+
+  public static async loginUserWithPhoneNumber(
+    phoneNumber: any,
+    countryCode: any,
+    password: any
+  ) {
+    let parsedPhoneNumber;
+    try {
+      parsedPhoneNumber =
+        PhoneNumberHelper.parsePhoneNumberFromString(phoneNumber);
+    } catch (error) {
+      throw new Error(error.message);
+    }
+    let nationalNumber;
+    if (typeof parsedPhoneNumber === "string") {
+      nationalNumber = parsedPhoneNumber;
+    }
+    if (typeof parsedPhoneNumber !== "string") {
+      nationalNumber = parsedPhoneNumber.getNationalNumber();
+    }
+
+    const loginData = await SessionRepository.getLoginDataForUserByPhoneNumber(
+      nationalNumber,
+      countryCode
+    );
+
+    if (loginData.user.userID === undefined) {
+      throw new Error("User with not found");
+    }
+
+    if (loginData.session) {
+      if (!(await SessionRepository.deleteSession(loginData.session))) {
+        console.log(
+          "[LOG - DATA] - " +
+            new Date() +
+            " -> LOG::Error::UserService::Delete session if statement::Could not delete session with session ID: " +
+            loginData.session.sessionID,
+          " check SessionRepository logs for more information"
+        );
+        throw new Error("Could not login user");
+      }
+      console.log(
+        "[LOG - DATA] - " +
+          new Date() +
+          " -> LOG::Success:UserService::Delete session if statement:: Successfully deleted session for user with ID: " +
+          loginData.user.userID
+      );
+    }
+    loginData.session = await SessionRepository.createSession(loginData.user);
+
+    //Validate user password
+    console.log(
+      await EncryptionHelpers.validatePassword(
+        password,
+        loginData.password.hash
+      )
+    );
+    if (
+      !(await EncryptionHelpers.validatePassword(
+        password,
+        loginData.password.hash
+      ))
+    ) {
+      console.log(
+        "[LOG - DATA] - " +
+          new Date() +
+          " -> LOG::Error::UserService::loginUserWithPhoneNumber::Access denied for user with ID: " +
+          loginData.user.userID +
+          ", incorrect password"
+      );
+      throw new Error("Invalid password");
     }
     return loginData;
   }

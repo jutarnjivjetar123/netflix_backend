@@ -5,6 +5,7 @@ import User from "../../models/user.model/user.model";
 import UserSalt from "../../models/user.model/salt.model";
 import UserSession from "../../models/user.model/session.model";
 import UserPassword from "../../models/user.model/password.model";
+import UserPhoneNumber from "../../models/user.model/phone.model";
 import { MoreThan } from "typeorm";
 import ReturnObjectHandler from "../../utilities/returnObject.utility";
 import UserRepository from "./user.repository";
@@ -249,12 +250,122 @@ export default class SessionRepository {
         session[attribute] = result[key];
       }
     }
-    
+
     console.log(user);
     console.log(emailObject);
     console.log(password);
     console.log(salt);
     console.log(session);
     return { user, emailObject, password, salt, session };
+  }
+
+  public static async getLoginDataForUserByPhoneNumber(
+    phoneNumber: string,
+    countryCode: string
+  ) {
+    const searchResult = await DatabaseConnection.getRepository(User)
+      .createQueryBuilder("user")
+      .innerJoinAndSelect(
+        UserPhoneNumber,
+        "phone",
+        "user.userID = phone.userUserID"
+      )
+      .leftJoinAndSelect(UserEmail, "email", "user.userID = email.userUserID")
+      .innerJoinAndSelect(
+        UserPassword,
+        "password",
+        "user.userID = password.userUserID"
+      )
+      .innerJoinAndSelect(
+        UserSalt,
+        "salt",
+        "user.userID = salt.saltOwnerUserID"
+      )
+      .leftJoinAndSelect(
+        UserSession,
+        "session",
+        "user.userID = session.sessionOwnerUserID"
+      )
+      .where("phone.phoneNumber = :phoneNumber", { phoneNumber })
+      .andWhere("phone.internationalCallingCode = :countryCode", {
+        countryCode,
+      })
+      .getRawOne();
+
+    console.log(
+      "[LOG - DATA] - " +
+        new Date() +
+        " -> LOG::Info::SessionRepository::getLoginDataForUserByPhoneNumber::Retrieved login data for phone number (" +
+        countryCode +
+        ") " +
+        phoneNumber +
+        ": " +
+        JSON.stringify(searchResult)
+    );
+
+    const user = new User();
+    const email = new UserEmail();
+    const phone = new UserPhoneNumber();
+    const password = new UserPassword();
+    const salt = new UserSalt();
+    const session = new UserSession();
+
+    for (const key in searchResult) {
+      if (key.startsWith("user_")) {
+        const attribute = key.replace("user_", "");
+        user[attribute] = searchResult[key];
+      }
+      if (key.startsWith("email_")) {
+        const attribute = key.replace("email_", "");
+        email[attribute] = searchResult[key];
+      }
+      if (key.startsWith("phone_")) {
+        const attribute = key.replace("phone_", "");
+        phone[attribute] = searchResult[key];
+      }
+      if (key.startsWith("password_")) {
+        const attribute = key.replace("password_", "");
+        password[attribute] = searchResult[key];
+      }
+      if (key.startsWith("salt_")) {
+        const attribute = key.replace("salt_", "");
+        salt[attribute] = searchResult[key];
+      }
+      if (key.startsWith("session_")) {
+        const attribute = key.replace("session_", "");
+        session[attribute] = searchResult[key];
+      }
+    }
+
+    return { user, phone, email, password, salt, session };
+  }
+
+  public static async getSessionObjectBySessionId(sessionId: string) {
+    return await DatabaseConnection.getRepository(UserSession)
+      .findOne({
+        where: {
+          sessionID: sessionId,
+        },
+      })
+      .then((data) => {
+        console.log(
+          "[LOG - DATA] - " +
+            new Date() +
+            " -> LOG::Success::SessionRepository::getSessionObjectBySessionId::Found session for sessionId: " +
+            sessionId
+        );
+        return data;
+      })
+      .catch((error) => {
+        console.log(
+          "[LOG - DATA] - " +
+            new Date() +
+            " -> LOG::Error::SessionRepository::getSessionObjectBySessionID::Error occured whilst trying to find session with id " +
+            sessionId +
+            ", error: " +
+            error.message
+        );
+        return null;
+      });
   }
 }

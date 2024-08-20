@@ -26,33 +26,17 @@ export default class UserRepository {
 
   public static async doesUserExistWithPhoneNumber(
     phoneNumber: string,
-    countryCode: string = null
+    countryCode: string
   ) {
-    let foundUser;
+    const foundUser = await DatabaseConnection.getRepository(
+      UserPhoneNumber
+    ).findOne({
+      where: {
+        phoneNumber: phoneNumber,
+        internationalCallingCode: countryCode,
+      },
+    });
 
-    foundUser = await DatabaseConnection.getRepository(UserPhoneNumber).findOne(
-      {
-        where: {
-          phoneNumber: phoneNumber,
-          internationalCallingCode: countryCode,
-        },
-        relations: {
-          user: true,
-        },
-      }
-    );
-    if (!foundUser) {
-      foundUser = await DatabaseConnection.getRepository(
-        UserPhoneNumber
-      ).findOne({
-        where: {
-          phoneNumber: phoneNumber,
-        },
-        relations: {
-          user: true,
-        },
-      });
-    }
     return foundUser !== null ? true : false;
   }
   //Function to create new User entity, along with that creates UserEmail, UserPassword, UserSalt objects that have a one to one relationship with the created User entity, relation is connected using userID
@@ -128,7 +112,7 @@ export default class UserRepository {
   public static async createPhoneNumberByUser(
     user: User,
     newPhoneNumber: string,
-    countryCode: string = null
+    countryCode: string
   ) {
     const phoneNumber = new UserPhoneNumber();
     phoneNumber.phoneNumber = newPhoneNumber;
@@ -221,5 +205,50 @@ export default class UserRepository {
         );
         return null;
       });
+  }
+  //GET salt value from UserSalt table using userID by email, only returns salt, not complete salt object
+  public static async getSaltAndSessionObjectBySessionID(sessionID: string) {
+    const searchResult = await DatabaseConnection.getRepository(UserSession)
+      .createQueryBuilder("session")
+      .innerJoinAndSelect(
+        UserSalt,
+        "salt",
+        "session.sessionOwnerUserID = salt.saltOwnerUserID"
+      )
+      .where("session.sessionID = :sessionID", { sessionID })
+      .getRawOne()
+      .then((data) => {
+        return data;
+      })
+      .catch((error) => {
+        console.log(
+          "[LOG - DATA] - " +
+            new Date() +
+            " - LOG::Error::UserRepository::getSaltAndSessionObjectBySessionID::Error occurred while trying to find session and salt with sessionID: " +
+            sessionID +
+            ", error: " +
+            error.message
+        );
+        return null;
+      });
+    console.log(searchResult);
+    if (!searchResult) {
+      return null;
+    }
+    const session = new UserSession();
+    const salt = new UserSalt();
+    for (const key in searchResult) {
+      if (key.startsWith("session_")) {
+        const attribute = key.replace("session_", "");
+        console.log(attribute);
+        session[attribute] = searchResult[key];
+      }
+      if (key.startsWith("salt_")) {
+        const attribute = key.replace("salt_", "");
+        console.log(attribute);
+        salt[attribute] = searchResult[key];
+      }
+    }
+    return { session, salt };
   }
 }

@@ -21,9 +21,9 @@ export default class UserPhoneNumber {
   phoneNumber: string;
 
   @Column({
-    nullable: true,
+    nullable: false,
   })
-  internationalCallingCode: string | null;
+  internationalCallingCode: string;
 
   @JoinColumn()
   @OneToOne(() => User)
