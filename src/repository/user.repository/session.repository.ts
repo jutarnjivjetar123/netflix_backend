@@ -6,19 +6,16 @@ import UserSalt from "../../models/user.model/salt.model";
 import UserSession from "../../models/user.model/session.model";
 import UserPassword from "../../models/user.model/password.model";
 import UserPhoneNumber from "../../models/user.model/phone.model";
-import { MoreThan } from "typeorm";
-import ReturnObjectHandler from "../../utilities/returnObject.utility";
-import UserRepository from "./user.repository";
-import EncryptionHelpers from "../../helpers/encryption.helper";
-import UserService from "../../service/user.service/user.service";
-import JWTHelper from "../../helpers/jwtokens.helpers";
 import UserEmail from "../../models/user.model/email.model";
+import UserPublicId from "../../models/user.model/publicId.model";
+import JWTHelper from "../../helpers/jwtokens.helpers";
 
 const refreshTokenSecret =
   "1UdngmYkyN8pUPtKTePB/FySbCSf+L9BNmUoE1taBo7N5bErKt1clnN4sxDOWLitIQkaO398jd9LrHSigaKaB3NGc7CoB8UZNuX4GHwnDHRUHt8cEPnQi6AoDaELXnLtgMC/fghYkyeauIRp0mIIgWMpYvVVy89SdnDbQN0x/9psTpa0tAbm6cLnJT9lnq7dEUOcfeDH9cpTRMM9SgMUrKQAYgvDa9NJk2tjX6wGWBb1JqAHHIP7sg/FHXBcxZh0lnaubhxg9iVPWX6vtj4aoIM57KvlmFXbNnpijewkc/VS2k3ozjPjrbl4ycdhPMZNK3mCkTJ4eYAXXgFCHRFM5Q==";
 export default class SessionRepository {
   public static async createSession(
     userToCreateSessionFor: User,
+    userPublicId: UserPublicId,
     expiresIn: Date = new Date(new Date().getTime() + 30 * 24 * 60 * 60 * 1000)
   ) {
     const newSession = new UserSession();
@@ -26,7 +23,7 @@ export default class SessionRepository {
     newSession.expiresAt = expiresIn;
     newSession.refreshToken = JWTHelper.generateToken(
       {
-        userID: userToCreateSessionFor.userID,
+        id: userPublicId.publicId,
       },
       refreshTokenSecret,
       "30d"
@@ -196,9 +193,11 @@ export default class SessionRepository {
   public static async getLoginDataForUserByEmail(email: string): Promise<{
     user: User;
     emailObject: UserEmail;
+    phone: UserPhoneNumber;
     password: UserPassword;
     salt: UserSalt;
     session: UserSession;
+    publicId: UserPublicId;
   } | null> {
     console.log("Getting data for user with email: " + email);
     const result = await DatabaseConnection.getRepository(User)
@@ -208,6 +207,11 @@ export default class SessionRepository {
         UserPassword,
         "password",
         "user.userID = password.userUserID"
+      )
+      .leftJoinAndSelect(
+        UserPhoneNumber,
+        "phone",
+        "user.userID = phone.userUserID"
       )
       .innerJoinAndSelect(
         UserSalt,
@@ -219,15 +223,21 @@ export default class SessionRepository {
         "session",
         "user.userID = session.sessionOwnerUserID"
       )
+      .innerJoinAndSelect(
+        UserPublicId,
+        "publicId",
+        "user.userID = publicId.userUserID"
+      )
       .where("email = :email", { email })
       .getRawOne();
-
     const user = new User();
     const emailObject = new UserEmail();
+    const phone = new UserPhoneNumber();
     const password = new UserPassword();
     const salt = new UserSalt();
     const session = new UserSession();
-
+    const publicId = new UserPublicId();
+    console.log(result);
     for (const key in result) {
       if (key.startsWith("user_")) {
         const attribute = key.replace("user_", "");
@@ -236,6 +246,10 @@ export default class SessionRepository {
       if (key.startsWith("email_")) {
         const attribute = key.replace("email_", "");
         emailObject[attribute] = result[key];
+      }
+      if (key.startsWith("phone_")) {
+        const attribute = key.replace("phone_", "");
+        phone[attribute] = result[key];
       }
       if (key.startsWith("password_")) {
         const attribute = key.replace("password_", "");
@@ -249,14 +263,20 @@ export default class SessionRepository {
         const attribute = key.replace("session_", "");
         session[attribute] = result[key];
       }
+      if (key.startsWith("publicId_")) {
+        const attribute = key.replace("publicId_", "");
+        publicId[attribute] = result[key];
+      }
     }
 
     console.log(user);
     console.log(emailObject);
+    console.log(phone);
     console.log(password);
     console.log(salt);
     console.log(session);
-    return { user, emailObject, password, salt, session };
+    console.log(publicId);
+    return { user, emailObject, phone, password, salt, session, publicId };
   }
 
   public static async getLoginDataForUserByPhoneNumber(
@@ -286,6 +306,11 @@ export default class SessionRepository {
         "session",
         "user.userID = session.sessionOwnerUserID"
       )
+      .innerJoinAndSelect(
+        UserPublicId,
+        "publicId",
+        "user.userID = publicId.userUserID"
+      )
       .where("phone.phoneNumber = :phoneNumber", { phoneNumber })
       .andWhere("phone.internationalCallingCode = :countryCode", {
         countryCode,
@@ -309,7 +334,7 @@ export default class SessionRepository {
     const password = new UserPassword();
     const salt = new UserSalt();
     const session = new UserSession();
-
+    const publicId = new UserPublicId();
     for (const key in searchResult) {
       if (key.startsWith("user_")) {
         const attribute = key.replace("user_", "");
@@ -335,9 +360,13 @@ export default class SessionRepository {
         const attribute = key.replace("session_", "");
         session[attribute] = searchResult[key];
       }
+      if (key.startsWith("publicId_")) {
+        const attribute = key.replace("publicId_", "");
+        publicId[attribute] = searchResult[key];
+      }
     }
 
-    return { user, phone, email, password, salt, session };
+    return { user, phone, email, password, salt, session, publicId };
   }
 
   public static async getSessionObjectBySessionId(sessionId: string) {
@@ -367,5 +396,24 @@ export default class SessionRepository {
         );
         return null;
       });
+  }
+  //Get User, UserEmail, UserPhoneNumber, and UserSession using sessionId
+  public static async getLoginDataBySessionID(sessionID: string) {
+    const searchResult = await DatabaseConnection.getRepository(UserSession)
+      .createQueryBuilder("session")
+      .innerJoinAndSelect(
+        User,
+        "user",
+        "session.sessionOwnerUserID = user.userID"
+      )
+      .leftJoinAndSelect(UserEmail, "email", "user.userID = email.userUserID")
+      .leftJoinAndSelect(
+        UserPhoneNumber,
+        "phone",
+        "user.userID = phone.userUserID"
+      )
+      .where("session.sessionID = :sessionID", { sessionID })
+      .getRawOne();
+    console.log(searchResult);
   }
 }

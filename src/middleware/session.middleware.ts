@@ -11,7 +11,9 @@ export default class SessionMiddleware {
     res: express.Response,
     next: express.NextFunction
   ) {
+    console.log(req.headers.authorization);
     if (!req.headers.authorization) {
+      console.log("AUTH error");
       return res.status(403).send({
         successState: false,
         message: "Invalid token",
@@ -22,6 +24,7 @@ export default class SessionMiddleware {
     const decodedToken = JWTHelper.decodeToken(accessToken);
     const decodedTokenInJSON = JSON.parse(JSON.stringify(decodedToken));
     if (!decodedTokenInJSON) {
+      console.log("Token decode ERROR");
       return res.status(403).send({
         successState: false,
         message: "Invalid token",
@@ -32,6 +35,7 @@ export default class SessionMiddleware {
       !decodedTokenInJSON.hasOwnProperty("sessionID") ||
       !decodedTokenInJSON.hasOwnProperty("id")
     ) {
+      console.log("Missing property error");
       return res.status(403).send({
         successState: false,
         message: "Invalid token",
@@ -83,7 +87,7 @@ export default class SessionMiddleware {
         timestamp: new Date(),
       });
     }
-    
+
     console.log("Access token is valid, granted access to user");
     next();
   }

@@ -119,6 +119,16 @@ export default class UserService {
       );
       return null;
     }
+    //Public Id object
+    const newPublicId = await UserRepository.createPublicIdForUser(newUser);
+    if (!newPublicId) {
+      console.log(
+        "[LOG - DATA] - " +
+          new Date() +
+          " -> LOG::Error::UserService::registerUserWithEmail::Could not create new public user id, check UserRepository logs for more details"
+      );
+      return null;
+    }
     console.log(
       "[LOG - DATA] - " +
         new Date() +
@@ -213,13 +223,23 @@ export default class UserService {
       );
       return null;
     }
+
+    //Public Id object
+    const newPublicId = await UserRepository.createPublicIdForUser(newUser);
+    if (!newPublicId) {
+      console.log(
+        "[LOG - DATA] - " +
+          new Date() +
+          " -> LOG::Error::UserService::registerUserWithPhoneNumber::Could not create new public id, check UserRepository logs for more details"
+      );
+      return null;
+    }
     return newUser;
   }
 
   public static async loginUserWithEmail(email: string, password: string) {
-    //Get user object, along with email, password, salt, and session object
+    //Get user object, along with email, phone number, password, salt, and session object
     const loginData = await SessionRepository.getLoginDataForUserByEmail(email);
-
     if (loginData.user.userID === undefined) {
       throw new Error("User with not found");
     }
@@ -241,7 +261,10 @@ export default class UserService {
           loginData.user.userID
       );
     }
-    loginData.session = await SessionRepository.createSession(loginData.user);
+    loginData.session = await SessionRepository.createSession(
+      loginData.user,
+      loginData.publicId
+    );
 
     if (
       !(await EncryptionHelpers.validatePassword(
@@ -309,7 +332,10 @@ export default class UserService {
           loginData.user.userID
       );
     }
-    loginData.session = await SessionRepository.createSession(loginData.user);
+    loginData.session = await SessionRepository.createSession(
+      loginData.user,
+      loginData.publicId
+    );
 
     //Validate user password
     console.log(

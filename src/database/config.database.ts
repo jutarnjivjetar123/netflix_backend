@@ -7,6 +7,7 @@ import UserHash from "../models/user.model/salt.model";
 import UserVerificationToken from "../models/user.model/verificationToken.model";
 import UserSession from "../models/user.model/session.model";
 import UserPhoneNumber from "../models/user.model/phone.model";
+import UserPublicId from "../models/user.model/publicId.model";
 
 export const DatabaseConnection = new DataSource({
   type: "postgres",
@@ -23,6 +24,7 @@ export const DatabaseConnection = new DataSource({
     UserVerificationToken,
     UserSession,
     UserPhoneNumber,
+    UserPublicId,
   ],
   logging: false,
   synchronize: true,

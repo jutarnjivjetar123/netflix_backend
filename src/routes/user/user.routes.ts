@@ -26,6 +26,11 @@ class UserRouter {
       SessionMiddleware.checkAuthorization,
       this.getProtectedData
     );
+    this.router.post(
+      "/dashboard",
+      SessionMiddleware.checkAuthorization,
+      this.getDashboardData
+    );
   }
 
   private async registerUser(req: express.Request, res: express.Response) {
@@ -269,6 +274,9 @@ class UserRouter {
           timestamp: new Date(),
         });
       }
+      console.log(
+        "Session ID using email login: " + loginResult.session.sessionID
+      );
       const token = JWTHelper.generateToken(
         {
           sessionID: loginResult.session.sessionID,
@@ -281,13 +289,11 @@ class UserRouter {
       return res.status(200).send({
         successState: true,
         message: "Welcome back, " + email,
+
         data: {
-          email: loginResult.emailObject.email,
-          phoneNumber: null,
-          username: loginResult.user.username,
-          firstName: loginResult.user.firstName,
-          lastName: loginResult.user.lastName,
+          redirectLink: "http://localhost:5501/src/dashboard.html",
         },
+
         timestamp: new Date(),
       });
     }
@@ -306,24 +312,26 @@ class UserRouter {
           timestamp: new Date(),
         });
       }
-
+      console.log(
+        "LOG from UserRouter, session: " +
+          JSON.stringify(loginResult.session.sessionID)
+      );
       const token = JWTHelper.generateToken(
         {
-          token: loginResult.session.refreshToken,
-          phone:
-            loginResult.phone.internationalCallingCode +
-            " " +
-            loginResult.phone.phoneNumber,
-          id: EncryptionHelpers.generateSalt(12),
+          sessionId: loginResult.session.sessionID,
+          id: await EncryptionHelpers.generateSalt(12),
         },
         loginResult.salt.salt
       );
+
       res.header("Authorization", "Bearer " + token);
       res.header("Refresh-Token", "Bearer " + loginResult.session.refreshToken);
       return res.status(200).send({
         successState: true,
         message: "Welcome back, " + phoneNumber,
-        data: loginResult,
+        data: {
+          redirectLink: "http://localhost:5501/src/dashboard.html",
+        },
         timestamp: new Date(),
       });
     }
@@ -332,6 +340,22 @@ class UserRouter {
     return res.status(200).send({
       successState: true,
       message: "The protected data",
+      timestamp: new Date(),
+    });
+  }
+
+  private async getDashboardData(req: express.Request, res: express.Response) {
+    const authSessionId = req.headers.authorization;
+    console.log(authSessionId);
+    const decodedToken = JWTHelper.decodeToken(authSessionId.split(" ")[1]);
+    console.log(JSON.parse(JSON.stringify(decodedToken)));
+    const decodedTokenInJSON = JSON.parse(JSON.stringify(decodedToken));
+    const sessionId = decodedTokenInJSON.sessionID;
+    console.log(sessionId);
+    await SessionRepository.getLoginDataBySessionID(sessionId);
+    return res.status(200).send({
+      successState: true,
+      message: "Dashboard data",
       timestamp: new Date(),
     });
   }

@@ -8,6 +8,7 @@ import { DatabaseConnection } from "../../database/config.database";
 import EncryptionHelpers from "../../helpers/encryption.helper";
 import ReturnObjectHandler from "../../utilities/returnObject.utility";
 import { PhoneNumberHelper } from "../../helpers/phoneNumber.helpers";
+import UserPublicId from "../../models/user.model/publicId.model";
 
 export default class UserRepository {
   public static async doesUserExistWithEmail(email: string): Promise<boolean> {
@@ -199,6 +200,35 @@ export default class UserRepository {
           "[LOG - DATA] - " +
             new Date() +
             "- LOG::Error::UserRepository::createSaltByUser::Failed to create a new salt for user with id: " +
+            user.userID +
+            ", error: " +
+            error.message
+        );
+        return null;
+      });
+  }
+  //Creates a public id for specified user, so that id can be used to communicate with outside service, without exposing user data
+  public static async createPublicIdForUser(user: User) {
+    const publicId = new UserPublicId();
+    publicId.user = user;
+    publicId.createdAt = new Date();
+    publicId.modifiedAt = null;
+    return await DatabaseConnection.getRepository(UserPublicId)
+      .save(publicId)
+      .then((data) => {
+        console.log(
+          "[LOG - DATA] - " +
+            new Date() +
+            " -> LOG::Success::UserRepository::CreatePublicIdForUser::trycatch block::Created public id for user with id: " +
+            user.userID
+        );
+        return data;
+      })
+      .catch((error) => {
+        console.log(
+          "[LOG - DATA] - " +
+            new Date() +
+            " -> LOG::Error::UserRepository::createPublicIdForUser::trycatch::Error creating new public id for user with id: " +
             user.userID +
             ", error: " +
             error.message
