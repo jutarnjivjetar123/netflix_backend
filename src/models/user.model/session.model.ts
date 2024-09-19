@@ -10,7 +10,6 @@ import {
 } from "typeorm";
 
 import User from "./user.model";
-import UserVerificationToken from "./verificationToken.model";
 
 @Entity("UserSessions", {
   schema: "Users",
@@ -26,29 +25,9 @@ export default class UserSession {
   @CreateDateColumn()
   createdAt: Date;
 
-  @UpdateDateColumn()
-  lastActivityAt: Date;
-
   @Column()
   expiresAt: Date;
 
   @Column()
-  ipAddressOfSessionInitialization: string;
-
-  @Column({})
-  lastIpAddressOfActivity: string;
-
-  @Column()
-  userAgent: string;
-
-  @Column()
-  authToken: string;
-
-  @Column()
-  crsfToken: string;
-
-  @Column({
-    nullable: true,
-  })
-  sessionData: string;
+  refreshToken: string;
 }

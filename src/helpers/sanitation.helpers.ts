@@ -4,7 +4,9 @@ export default class DataSanitation {
   public static removeAllWhitespaces(inputData: string) {
     return inputData.split(/\s+/).join("");
   }
-
+  public static isEmail(checkValue: string) {
+    return validator.isEmail(checkValue);
+  }
   public static removeAllSpecialCharacters(
     inputData: string,
     charactersToRemove: RegExp = /[^a-zA-Z0-9._]/g

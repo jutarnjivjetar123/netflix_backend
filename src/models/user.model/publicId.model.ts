@@ -8,15 +8,18 @@ import {
   JoinColumn,
 } from "typeorm";
 
-@Entity("Users", {
+import User from "../user.model/user.model";
+@Entity("UserPublicId", {
   schema: "Users",
 })
-export default class User {
+export default class UserPublicId {
   @PrimaryGeneratedColumn("uuid")
-  userId: string;
+  publicId: string;
 
-  @Column()
-  usedEmailToSignUp: boolean;
+  @OneToOne(() => User)
+  @JoinColumn()
+  user: User;
+
   @Column()
   createdAt: Date;
 
