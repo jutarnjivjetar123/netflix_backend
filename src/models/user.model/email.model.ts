@@ -16,10 +16,10 @@ import User from "./user.model";
 })
 export default class UserEmail {
   @PrimaryGeneratedColumn("uuid")
-  emailID: number;
+  userEmailId: number;
 
   @OneToOne((type) => User, {})
-  @JoinColumn({ name: "userUserID" })
+  @JoinColumn({ name: "userId" })
   user: User;
 
   @Column()

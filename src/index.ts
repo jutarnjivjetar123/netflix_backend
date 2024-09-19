@@ -1,12 +1,17 @@
 import express from "express";
 import cors from "cors";
 import "reflect-metadata";
+import userRoutes from "./routes/user/login.user.routes";
+import registerRoutes from "./routes/user/register.user.routes";
+import offerRoutes from "./routes/subscription/offer.subscription.routes";
+// import subscriptionRoutes from "./routes/subscription/subscription.subscription.routes";
+import paymentRoutes from "./routes/subscription/paymentDevice.subscription.routes";
 
 import {
   initializeDatabaseConnection,
   DatabaseConnection,
 } from "./database/config.database";
-import UserRouter from "./routes/user/user.routes";
+import UserRouter from "./routes/user/login.user.routes";
 import { PhoneNumberUtil } from "google-libphonenumber";
 const app = express();
 const port = process.env.DEFAULT_PORT || 3000;
@@ -18,10 +23,11 @@ startDatabaseConnection();
 
 app.use(express.json());
 app.use(cors());
-
-app.use("/user", UserRouter);
-
-app.get("/checkStatus", (req: express.Request, res: express.Response) => {
+app.use("/user/register", registerRoutes);
+app.use("/offer", offerRoutes);
+app.use("/payment", paymentRoutes);
+// app.use("/subscription", subscriptionRoutes);
+app.get("/check/status", (req: express.Request, res: express.Response) => {
   return res.status(200).send({
     successState: true,
     message: "API is available to use",
@@ -53,7 +59,6 @@ app.get(
 app.get(
   "/settings/languagesList",
   (req: express.Request, res: express.Response) => {
-    const region = req.params;
 
     res.status(200).send({});
   }

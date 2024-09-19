@@ -17,11 +17,15 @@ export default class UserPassword {
   @PrimaryGeneratedColumn("uuid")
   passwordID: string;
 
-  @Column()
-  salt: string;
+  @OneToOne(() => User)
+  @JoinColumn({ name: "userId" })
+  user: User;
 
   @Column()
   hash: string;
+
+  @Column()
+  salt: string;
 
   @CreateDateColumn()
   createdAt: Date;
@@ -30,8 +34,4 @@ export default class UserPassword {
     nullable: true,
   })
   updatedAt: Date | null;
-
-  @OneToOne(() => User)
-  @JoinColumn()
-  user: User;
 }

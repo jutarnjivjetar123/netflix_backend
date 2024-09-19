@@ -15,19 +15,17 @@ import User from "../user.model/user.model";
 })
 export default class UserPhoneNumber {
   @PrimaryGeneratedColumn("uuid")
-  phoneNumberID: string;
+  userPhoneNumberID: string;
+
+  @OneToOne((type) => User, {})
+  @JoinColumn({ name: "userId" })
+  user: User;
+
+  @Column()
+  countryCode: string;
 
   @Column()
   phoneNumber: string;
-
-  @Column({
-    nullable: false,
-  })
-  internationalCallingCode: string;
-
-  @JoinColumn()
-  @OneToOne(() => User)
-  user: User;
 
   @CreateDateColumn()
   createdAt: Date;

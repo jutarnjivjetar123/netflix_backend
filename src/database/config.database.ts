@@ -4,11 +4,12 @@ import User from "../models/user.model/user.model";
 import UserPassword from "../models/user.model/password.model";
 import UserEmail from "../models/user.model/email.model";
 import UserHash from "../models/user.model/salt.model";
-import UserVerificationToken from "../models/user.model/verificationToken.model";
 import UserSession from "../models/user.model/session.model";
 import UserPhoneNumber from "../models/user.model/phone.model";
 import UserPublicId from "../models/user.model/publicId.model";
-
+import Offer from "../models/subscription.model/offer.model";
+import PaymentDevice from "../models/subscription.model/paymentDevice.model";
+import Subscription from "../models/subscription.model/subscription.model";
 export const DatabaseConnection = new DataSource({
   type: "postgres",
   host: "localhost",
@@ -21,10 +22,12 @@ export const DatabaseConnection = new DataSource({
     UserPassword,
     UserEmail,
     UserHash,
-    UserVerificationToken,
     UserSession,
     UserPhoneNumber,
     UserPublicId,
+    Offer,
+    PaymentDevice,
+    Subscription,
   ],
   logging: false,
   synchronize: true,
