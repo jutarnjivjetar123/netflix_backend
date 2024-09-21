@@ -21,21 +21,16 @@ export default class UserSalt {
 
   @Column()
   salt: string;
-
-  @CreateDateColumn()
-  createdAt: Date;
-
-  @UpdateDateColumn({
-    nullable: true,
-  })
-  updatedAt: Date | null;
-
-  @DeleteDateColumn({
-    nullable: true,
-  })
-  deletedAt: Date | null;
-
   @OneToOne(() => User)
-  @JoinColumn()
-  saltOwner: User;
+  @JoinColumn({ name: "userId" })
+  user: User;
+
+  @Column({ type: "bigint" })
+  createdAt: string;
+
+  @Column({
+    nullable: true,
+    type: "bigint",
+  })
+  modifiedAt: string | null;
 }

@@ -32,9 +32,9 @@ export default class Offer {
   @Column()
   isSpatialAudio: boolean;
 
-  @CreateDateColumn()
-  createdAt: Date;
+  @Column({ type: "bigint" })
+  createdAt: string;
 
-  @UpdateDateColumn()
-  modifiedAt: Date;
+  @Column({ nullable: true, type: "bigint" })
+  modifiedAt: string | null;
 }

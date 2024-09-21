@@ -31,7 +31,7 @@ export default class Subscription {
   @JoinColumn({ name: "paymentDeviceId" })
   paymentDevice: PaymentDevice;
 
-  @Column()
+  @Column({ type: "bigint" })
   expiresAt: string;
 
   @Column({ type: "money" })
@@ -40,9 +40,15 @@ export default class Subscription {
   @Column()
   isActive: boolean;
 
-  @CreateDateColumn()
+  @Column()
+  timezone: string;
+
+  @Column()
+  timezoneOffset: number;
+
+  @Column({ type: "bigint" })
   createdAt: string;
 
-  @UpdateDateColumn({ nullable: true })
+  @Column({ nullable: true, type: "bigint" })
   modifiedAt: string | null;
 }

@@ -19,15 +19,19 @@ export default class UserSession {
   sessionID: string;
 
   @OneToOne(() => User)
-  @JoinColumn()
-  sessionOwner: User;
-
-  @CreateDateColumn()
-  createdAt: Date;
-
-  @Column()
-  expiresAt: Date;
+  @JoinColumn({ name: "userId" })
+  user: User;
 
   @Column()
   refreshToken: string;
+
+  @Column({
+    type: "bigint",
+  })
+  createdAt: string;
+
+  @Column({
+    type: "bigint",
+  })
+  expiresAt: string;
 }

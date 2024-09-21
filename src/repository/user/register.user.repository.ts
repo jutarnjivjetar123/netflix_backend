@@ -8,6 +8,8 @@ import UserEmail from "../../models/user.model/email.model";
 import UserPhoneNumber from "../../models/user.model/phone.model";
 import UserPassword from "../../models/user.model/password.model";
 import UserPublicId from "../../models/user.model/publicId.model";
+import UserSalt from "../../models/user.model/salt.model";
+import EncryptionHelpers from "../../helpers/encryption.helper";
 /* METHODS*/
 /*
     - Check does User with given email exist
@@ -91,7 +93,7 @@ export default class UserRegisterRepository {
 
   public static async createUserObject(wasEmailUsedToSignUp: boolean) {
     const newUser = new User();
-    newUser.createdAt = new Date();
+    newUser.createdAt = new Date().getTime().toString();
     newUser.usedEmailToSignUp = wasEmailUsedToSignUp;
     const user: User | null = await DatabaseConnection.getRepository(User)
       .save(newUser)
@@ -116,6 +118,7 @@ export default class UserRegisterRepository {
           user.userId
       );
     }
+
     return user;
   }
 
@@ -126,7 +129,7 @@ export default class UserRegisterRepository {
     const newEmail = new UserEmail();
     newEmail.user = userToCreateFor;
     newEmail.email = email;
-    newEmail.createdAt = new Date();
+    newEmail.createdAt = new Date().getTime().toString();
     const result = await DatabaseConnection.getRepository(UserEmail)
       .save(newEmail)
       .then((data) => {
@@ -170,7 +173,7 @@ export default class UserRegisterRepository {
     newPhoneNumber.user = userToCreateFor;
     newPhoneNumber.countryCode = countryCode;
     newPhoneNumber.phoneNumber = phoneNumber;
-    newPhoneNumber.createdAt = new Date();
+    newPhoneNumber.createdAt = new Date().getTime().toString();
 
     const result: UserPhoneNumber | null =
       await DatabaseConnection.getRepository(UserPhoneNumber)
@@ -209,7 +212,7 @@ export default class UserRegisterRepository {
     newPassword.user = userToCreateFor;
     newPassword.hash = hash;
     newPassword.salt = salt;
-    newPassword.createdAt = new Date();
+    newPassword.createdAt = new Date().getTime().toString();
     const result = await DatabaseConnection.getRepository(UserPassword)
       .save(newPassword)
       .then((data) => {
@@ -241,7 +244,7 @@ export default class UserRegisterRepository {
   ): Promise<UserPublicId> {
     const newPublicUserId = new UserPublicId();
     newPublicUserId.user = userToCreateFor;
-    newPublicUserId.createdAt = new Date();
+    newPublicUserId.createdAt = new Date().getTime().toString();
     const result = await DatabaseConnection.getRepository(UserPublicId)
       .save(newPublicUserId)
       .then((data) => {
@@ -258,9 +261,46 @@ export default class UserRegisterRepository {
         );
         return null;
       });
-    if (result) { 
-      console.log("[LOG DATA] - " + new Date() + " -> LOG::Info::Repository::User::Register::createUserPublicId::Created new public id for user with id: " + userToCreateFor.userId);
+    if (result) {
+      console.log(
+        "[LOG DATA] - " +
+          new Date() +
+          " -> LOG::Info::Repository::User::Register::createUserPublicId::Created new public id for user with id: " +
+          userToCreateFor.userId
+      );
     }
+    return result;
+  }
+
+  public static async createUserSalt(user: User) {
+    const newSalt = new UserSalt();
+    newSalt.user = user;
+    newSalt.salt = await EncryptionHelpers.generateSalt();
+    newSalt.createdAt = new Date().getTime().toString();
+    newSalt.modifiedAt = null;
+    const result = await DatabaseConnection.getRepository(UserSalt)
+      .save(newSalt)
+      .then((data) => {
+        console.log(
+          "[LOG DATA] - " +
+            new Date() +
+            " -> LOG::Info::Repository::User::Register::createUserSalt::Created new UserSalt for User with id: " +
+            newSalt.user.userId
+        );
+        return data;
+      })
+      .catch((error) => {
+        console.log(
+          "[LOG DATA] - " +
+            new Date() +
+            " -> LOG::Error::Repository::User::Register::createUserSalt::Error occurred while creating a new UserSalt object for User with Id: " +
+            user.userId +
+            ", error message: " +
+            error.message
+        );
+        return null;
+      });
+
     return result;
   }
 }

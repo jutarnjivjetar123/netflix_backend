@@ -27,11 +27,12 @@ export default class UserPhoneNumber {
   @Column()
   phoneNumber: string;
 
-  @CreateDateColumn()
-  createdAt: Date;
+  @Column({ type: "bigint" })
+  createdAt: string;
 
-  @UpdateDateColumn({
+  @Column({
     nullable: true,
+    type: "bigint",
   })
-  modifiedAt: Date | null;
+  modifiedAt: string | null;
 }

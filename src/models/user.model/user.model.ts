@@ -17,11 +17,13 @@ export default class User {
 
   @Column()
   usedEmailToSignUp: boolean;
-  @Column()
-  createdAt: Date;
+
+  @Column({ type: "bigint" })
+  createdAt: string;
 
   @Column({
     nullable: true,
+    type: "bigint",
   })
-  modifiedAt: Date | null;
+  modifiedAt: string | null;
 }

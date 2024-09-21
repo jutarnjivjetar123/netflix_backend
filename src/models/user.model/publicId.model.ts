@@ -20,11 +20,12 @@ export default class UserPublicId {
   @JoinColumn()
   user: User;
 
-  @Column()
-  createdAt: Date;
+  @Column({ type: "bigint" })
+  createdAt: string;
 
   @Column({
     nullable: true,
+    type: "bigint",
   })
-  modifiedAt: Date | null;
+  modifiedAt: string | null;
 }

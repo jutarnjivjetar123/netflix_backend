@@ -26,8 +26,8 @@ export default class PaymentDevice {
   @Column()
   lastFourDigits: string;
 
-  @Column()
-  expirationDate: Date;
+  @Column({ type: "bigint" })
+  expirationDate: string;
 
   @Column()
   cardType: boolean;
@@ -38,9 +38,22 @@ export default class PaymentDevice {
   @Column()
   billingAddress: string;
 
-  @CreateDateColumn()
-  createdAt: Date;
+  @Column()
+  isDefault: boolean;
 
-  @UpdateDateColumn()
-  modifiedAt: Date;
+  @Column({
+    nullable: true,
+  })
+  timezone: string;
+
+  @Column({
+    nullable: true,
+  })
+  timezoneOffset: number;
+
+  @Column({ type: "bigint" })
+  createdAt: string;
+
+  @Column({ type: "bigint", nullable: true })
+  modifiedAt: string | null;
 }

@@ -59,11 +59,8 @@ export default class SubscriptionRepository {
     newSubscription.offer = offer;
     newSubscription.paymentDevice = paymentDevice;
     newSubscription.expiresAt = (
-      new Date().getTime() *
-      30 *
-      24 *
-      60 *
-      1000
+      new Date().getTime() +
+      30 * 24 * 60 * 60 * 1000
     ).toString();
     newSubscription.monthlyCost = offer.monthlyBillingAmount;
     newSubscription.isActive = true;

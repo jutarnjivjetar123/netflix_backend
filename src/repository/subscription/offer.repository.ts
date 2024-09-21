@@ -25,7 +25,7 @@ export default class OfferRepository {
     newOffer.maxNumberOfDevicesToDownload = maxNumberOfDevicesToDownload;
     newOffer.maxResolution = maxResolution;
     newOffer.isSpatialAudio = isSpatialAudio;
-    newOffer.createdAt = new Date();
+    newOffer.createdAt = new Date().getTime().toString();
     console.log(newOffer);
     return await DatabaseConnection.getRepository(Offer)
       .save(newOffer)

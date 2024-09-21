@@ -27,11 +27,12 @@ export default class UserPassword {
   @Column()
   salt: string;
 
-  @CreateDateColumn()
-  createdAt: Date;
+  @Column({ type: "bigint" })
+  createdAt: string;
 
-  @UpdateDateColumn({
+  @Column({
     nullable: true,
+    type: "bigint",
   })
-  updatedAt: Date | null;
+  updatedAt: string | null;
 }

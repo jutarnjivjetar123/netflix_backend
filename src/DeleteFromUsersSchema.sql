@@ -1,0 +1,7 @@
+DELETE FROM "Users"."UserEmail"
+DELETE FROM "Users"."UserPassword"
+DELETE FROM "Users"."UserPhoneNumber"
+DELETE FROM "Users"."UserPublicId"
+DELETE FROM "Users"."UserSalt"
+DELETE FROM "Users"."UserSessions"
+DELETE FROM "Users"."Users"

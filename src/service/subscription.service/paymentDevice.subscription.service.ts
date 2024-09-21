@@ -11,7 +11,7 @@ export default class PaymentDeviceService {
     userPublicId: string,
     cardholderName: string,
     lastFourDigits: string,
-    expirationDate: Date,
+    expirationDate: string,
     cardType: boolean,
     serviceProvider: string,
     billingAddress: string
@@ -30,7 +30,7 @@ export default class PaymentDeviceService {
     if (!validator.isUUID(userPublicId)) {
       return new ReturnObjectHandler("Public Id is not valid", null, 400);
     }
-    if (new Date(expirationDate) <= new Date()) {
+    if (Number(expirationDate) <= new Date().getTime()) {
       return new ReturnObjectHandler(
         "Expiration date cannot have value older than current date",
         null,
@@ -44,36 +44,93 @@ export default class PaymentDeviceService {
     }
 
     //Check does the PaymentDevice with the same data connected to the User already exist
-    const paymentDevicesByUser =
-      await PaymentDeviceRepository.getAllPaymentDeviceByUser(user);
-    if (paymentDevicesByUser !== null) {
-      console.log(
-        "Payment devices by User " +
-          userPublicId +
-          ": " +
-          paymentDevicesByUser.length
-      );
 
-      if (
-        paymentDevicesByUser.some((paymentDevice) => {
-          return (
-            paymentDevice.billingAddress === billingAddress &&
-            paymentDevice.cardType === cardType &&
-            paymentDevice.cardholderName === cardholderName &&
-            paymentDevice.lastFourDigits === lastFourDigits &&
-            paymentDevice.serviceProvider === serviceProvider &&
-            paymentDevice
-          );
-        })
-      ) {
+    const paymentDevicesByUser =
+      await PaymentDeviceRepository.getPaymentDevicesByUser(user);
+    if (paymentDevicesByUser) {
+      console.log(paymentDevicesByUser);
+      paymentDevicesByUser.forEach((element) => {
+        console.log("*****ELEMENT*****");
+        console.log("ELEMENT ID: " + element.paymentDeviceId);
+        console.log(
+          "Billing address: \nElement value: " +
+            element.billingAddress +
+            "\nNew pd value: " +
+            billingAddress +
+            "\nIs same: " +
+            (element.billingAddress === billingAddress)
+        );
+        console.log(
+          "Card type: \nElement value: " +
+            element.cardType +
+            "\nNew pd value: " +
+            cardType +
+            "\nIs same: " +
+            (element.cardType === cardType)
+        );
+        console.log(
+          "Cardholder name: \nElement value: " +
+            element.cardholderName +
+            "\nNew pd value: " +
+            cardholderName +
+            "\nIs same: " +
+            (element.cardholderName === cardholderName)
+        );
+        console.log(
+          "Expiration date: \nElement value: " +
+            element.expirationDate +
+            "\nNew pd value: " +
+            expirationDate +
+            "\nIs same: " +
+            (element.expirationDate === expirationDate)
+        );
+        console.log(
+          "Last four digits: \nElement value: " +
+            element.lastFourDigits +
+            "\nNew pd value: " +
+            lastFourDigits +
+            "\nIs same: " +
+            (element.lastFourDigits === lastFourDigits)
+        );
+        console.log(
+          "Service provider: \nElement value: " +
+            element.serviceProvider +
+            "\nNew pd value: " +
+            serviceProvider +
+            "\nIs same: " +
+            (element.serviceProvider === serviceProvider)
+        );
+
+        console.log(
+          "Is new payment device same as the current? " +
+            (element.billingAddress === billingAddress &&
+              element.cardType === cardType &&
+              element.cardholderName === cardholderName &&
+              element.expirationDate === expirationDate &&
+              element.lastFourDigits === lastFourDigits &&
+              element.serviceProvider === serviceProvider)
+        );
+      });
+      const isDuplicate = paymentDevicesByUser.some((element) => {
+        return (
+          element.billingAddress === billingAddress &&
+          element.cardType === cardType &&
+          element.cardholderName === cardholderName &&
+          element.expirationDate === expirationDate &&
+          element.lastFourDigits === lastFourDigits &&
+          element.serviceProvider === serviceProvider
+        );
+      });
+
+      if (isDuplicate) {
         return new ReturnObjectHandler(
-          "An existing payment device with the same data for user was found",
+          "Payment device with the same details already exists",
           null,
-          400
+          409
         );
       }
     }
-
+    const isDefault = paymentDevicesByUser ? false : true;
     //Attempt to create a PaymentDevice object in relation with given User relation
     const paymentDevice = await PaymentDeviceRepository.createPaymentDevice(
       user,
@@ -82,7 +139,8 @@ export default class PaymentDeviceService {
       expirationDate,
       cardType,
       serviceProvider,
-      billingAddress
+      billingAddress,
+      isDefault
     );
     if (!paymentDevice) {
       return new ReturnObjectHandler(
@@ -106,7 +164,7 @@ export default class PaymentDeviceService {
     paymentDeviceId: string,
     cardholderName?: string,
     lastFourDigits?: string,
-    expirationDate?: Date,
+    expirationDate?: string,
     cardType?: boolean,
     serviceProvider?: string,
     billingAddress?: string
@@ -309,4 +367,6 @@ export default class PaymentDeviceService {
     console.log("Was payment device updated? " + updateResult);
     return new ReturnObjectHandler("All test passed", null, 200);
   }
+
+  public static async getPaymentDeviceByUser(user: User) {}
 }

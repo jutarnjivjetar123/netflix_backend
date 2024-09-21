@@ -8,10 +8,11 @@ export default class PaymentDeviceRepository {
     ownedByUser: User,
     cardholderName: string,
     lastFourDigits: string,
-    expirationDate: Date,
+    expirationDate: string,
     cardType: boolean,
     serviceProvider: string,
-    billingAddress: string
+    billingAddress: string,
+    isDefault: boolean
   ) {
     const newPaymentDevice = new PaymentDevice();
     newPaymentDevice.user = ownedByUser;
@@ -21,7 +22,8 @@ export default class PaymentDeviceRepository {
     newPaymentDevice.cardType = cardType;
     newPaymentDevice.serviceProvider = serviceProvider;
     newPaymentDevice.billingAddress = billingAddress;
-    newPaymentDevice.createdAt = new Date();
+    newPaymentDevice.isDefault = isDefault;
+    newPaymentDevice.createdAt = new Date().getTime().toString();
 
     const result = await DatabaseConnection.getRepository(PaymentDevice)
       .save(newPaymentDevice)
@@ -49,7 +51,7 @@ export default class PaymentDeviceRepository {
 
     return result;
   }
-  public static async getAllPaymentDeviceByUser(
+  public static async getPaymentDevicesByUser(
     user: User
   ): Promise<PaymentDevice[] | null> {
     const paymentDevice = await DatabaseConnection.getRepository(PaymentDevice)
@@ -65,7 +67,7 @@ export default class PaymentDeviceRepository {
         console.log(
           "[LOG DATA] - " +
             new Date() +
-            " -> LOG::Info::Repository::Subscription::PaymentDevice::getPaymentDeviceByUser::Found PaymentDevice object related to user with id: " +
+            " -> LOG::Info::Repository::Subscription::PaymentDevice::getPaymentDevicesByUser::Found PaymentDevice object related to user with id: " +
             data[0].user.userId
         );
         return data;
@@ -74,7 +76,7 @@ export default class PaymentDeviceRepository {
         console.log(
           "[LOG DATA] - " +
             new Date() +
-            " -> LOG::Error::Repository::Subscription::PaymentDevice::getPaymentDeviceByUser::Error occurred whilst seeking the PaymentDevice object related to user with id: " +
+            " -> LOG::Error::Repository::Subscription::PaymentDevice::getPaymentDevicesByUser::Error occurred whilst seeking the PaymentDevice object related to user with id: " +
             user.userId +
             ", error message: " +
             error.message
@@ -85,7 +87,7 @@ export default class PaymentDeviceRepository {
       console.log(
         "[LOG DATA] - " +
           new Date() +
-          " -> LOG::Info::Repository::Subscription::PaymentDevice::getPaymentDeviceByUser::No PaymentDevice object was found related to user with id: " +
+          " -> LOG::Info::Repository::Subscription::PaymentDevice::getPaymentDevicesByUser::No PaymentDevice object was found related to user with id: " +
           user.userId
       );
     }
@@ -97,13 +99,12 @@ export default class PaymentDeviceRepository {
     paymentDevice: PaymentDevice,
     cardholderName?: string,
     lastFourDigits?: string,
-    expirationDate?: Date,
+    expirationDate?: string,
     cardType?: boolean,
     serviceProvider?: string,
-    billingAddress?: string
+    billingAddress?: string,
+    isDefault?: boolean
   ): Promise<boolean> {
-    
-    
     paymentDevice.cardholderName !== cardholderName
       ? (paymentDevice.cardholderName = cardholderName)
       : paymentDevice.cardholderName;
@@ -127,6 +128,9 @@ export default class PaymentDeviceRepository {
     paymentDevice.billingAddress !== billingAddress
       ? (paymentDevice.billingAddress = billingAddress)
       : paymentDevice.billingAddress;
+    paymentDevice.isDefault !== isDefault
+      ? (paymentDevice.isDefault = isDefault)
+      : paymentDevice.isDefault;
 
     const updateResult = await DatabaseConnection.getRepository(PaymentDevice)
       .save(paymentDevice)
@@ -135,7 +139,7 @@ export default class PaymentDeviceRepository {
           "[LOG DATA] - " +
             new Date() +
             " -> LOG::Info::Repository::Subscription::PaymentDevice::updatePaymentDevice::Updated PaymentDevice object related to user with id" +
-            paymentDevice.user.userId
+            data.user.userId
         );
         return true;
       })

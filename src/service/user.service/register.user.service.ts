@@ -59,13 +59,13 @@ export default class UserService {
       }
 
       //Create new UserPassword object for newly created User object with provided password
-      const salt = await EncryptionHelpers.generateSalt(12);
+      const passwordSalt = await EncryptionHelpers.generateSalt(12);
       const hashPassword = await EncryptionHelpers.hashPassword(password);
       const passwordObject =
         await UserRegisterRepository.createUserPasswordObject(
           user,
           hashPassword,
-          salt
+          passwordSalt
         );
       if (!passwordObject) {
         return new ReturnObjectHandler(
@@ -80,6 +80,19 @@ export default class UserService {
       //Create UserPublicId object for newly created User object
       const publicId = await UserRegisterRepository.createUserPublicId(user);
       if (!publicId) {
+        return new ReturnObjectHandler(
+          "Unknown error occured, could not create accout for " +
+            email +
+            ", please try again later",
+          null,
+          500
+        );
+      }
+
+      //Create UserSalt object for newly created User object
+      const salt = await UserRegisterRepository.createUserSalt(user);
+      console.log(salt);
+      if (!salt) {
         return new ReturnObjectHandler(
           "Unknown error occured, could not create accout for " +
             email +
@@ -141,13 +154,13 @@ export default class UserService {
         );
       }
       //Create new UserPassword object for newly created User object with provided password
-      const salt = await EncryptionHelpers.generateSalt(12);
+      const passwordSalt = await EncryptionHelpers.generateSalt(12);
       const hashPassword = await EncryptionHelpers.hashPassword(password);
       const passwordObject =
         await UserRegisterRepository.createUserPasswordObject(
           user,
           hashPassword,
-          salt
+          passwordSalt
         );
       if (!passwordObject) {
         return new ReturnObjectHandler(
@@ -170,6 +183,20 @@ export default class UserService {
           500
         );
       }
+
+      //Create UserSalt object for newly created User object
+      const salt = await UserRegisterRepository.createUserSalt(user);
+      console.log(salt);
+      if (!salt) {
+        return new ReturnObjectHandler(
+          "Unknown error occured, could not create accout for " +
+            email +
+            ", please try again later",
+          null,
+          500
+        );
+      }
+
       publicIdReturnValue = publicId.publicId;
     }
 
