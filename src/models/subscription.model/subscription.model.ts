@@ -40,10 +40,14 @@ export default class Subscription {
   @Column()
   isActive: boolean;
 
-  @Column()
+  @Column({
+    nullable: true,
+  })
   timezone: string;
 
-  @Column()
+  @Column({
+    nullable: true,
+  })
   timezoneOffset: number;
 
   @Column({ type: "bigint" })

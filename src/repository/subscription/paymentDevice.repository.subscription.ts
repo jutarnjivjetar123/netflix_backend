@@ -193,4 +193,78 @@ export default class PaymentDeviceRepository {
         return null;
       });
   }
+
+  public static async getDefaultPaymentDeviceByUser(user: User) {
+    const defaultPaymentDevice = await DatabaseConnection.getRepository(
+      PaymentDevice
+    )
+      .findOne({
+        where: {
+          user: user,
+          isDefault: true,
+        },
+        relations: {
+          user: true,
+        },
+      })
+      .then((data) => {
+        console.log(
+          "[LOG DATA] - " +
+            new Date() +
+            " -> LOG::Info::Repository::Subscription::PaymentDevice::getDefaultPaymentDeviceByUser::Found PaymentDevice with isDefault set to true for User with Id: " +
+            data.user.userId
+        );
+        return data;
+      })
+      .catch((error) => {
+        console.log(
+          "[LOG DATA] - " +
+            new Date() +
+            " -> LOG::Error::Repository::Subscription::PaymentDevice::getDefaultPaymentDeviceByUser::Error occurred while trying to find PaymentDevice with isDefault set to true associated with User with Id: " +
+            user.userId +
+            ", error message: " +
+            error.message
+        );
+        return null;
+      });
+
+    if (!defaultPaymentDevice) {
+      console.log(
+        "[LOG DATA] - " +
+          new Date() +
+          " -> LOG::Info::Repository::Subscription::PaymentDevice::getDefaultPaymentDeviceByUser::No PaymentDevice with isDefault attribute set to true was found associated with User with Id: " +
+          user.userId
+      );
+    }
+    return defaultPaymentDevice;
+  }
+
+  //Attempt to remove PaymentDevice object provided in the function parameter, returns boolean value, depending on the success of the deletion operation
+  public static async removePaymentDevice(
+    paymentDevice: PaymentDevice
+  ): Promise<boolean> {
+    return await DatabaseConnection.getRepository(PaymentDevice)
+      .remove(paymentDevice)
+      .then((data) => {
+        console.log(
+          "[LOG DATA] - " +
+            new Date() +
+            " -> LOG::Info::Repository::Subscription::PaymentDevice::removePaymentDevice::Successfully removed PaymentDevice object from the database, removed object data: " +
+            paymentDevice
+        );
+
+        return true;
+      })
+      .catch((error) => {
+        console.log(
+          "[LOG DATA] - " +
+            new Date() +
+            " LOG::Error::Repository::Subscription::PaymentDevice::Failed to remove PaymentDevice object from database, because error occurred, error message: " +
+            error.message +
+            ", object which was supposed to be removed: " +
+            paymentDevice
+        );
+        return false;
+      });
+  }
 }

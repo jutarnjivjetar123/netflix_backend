@@ -4,7 +4,11 @@ import DataSanitation from "../../helpers/sanitation.helpers";
 import { PhoneNumberHelper } from "../../helpers/phoneNumber.helpers";
 import EncryptionHelpers from "../../helpers/encryption.helper";
 import UserRegisterRepository from "../../repository/user/register.user.repository";
-export default class UserService {
+import UserService from "../user.service/main.user.service";
+import validator from "validator";
+import SubscriptionService from "../../service/subscription.service/subscription.subscription.service";
+import PaymentDeviceService from "../../service/subscription.service/paymentDevice.subscription.service";
+export default class UserRegisterService {
   static async registerUser(email, countryCode, phoneNumber, password) {
     //Check is any required parameter missing
     if (!email && (!countryCode || !phoneNumber)) {
@@ -203,6 +207,86 @@ export default class UserService {
     return new ReturnObjectHandler(
       "User is successfully registered",
       publicIdReturnValue,
+      200
+    );
+  }
+
+  //Function to provide necessary data for User when confirming Subscription
+  public static async getRegistrationDataByUserPublicId(userPublicId: string) {
+    if (!validator.isUUID(userPublicId)) {
+      return new ReturnObjectHandler("Public Id not valid");
+    }
+
+    //Get User associated with given publicId
+    const user = await UserService.getUserByPublicId(userPublicId);
+    if (!user) {
+      return new ReturnObjectHandler("User not found", null, 404);
+    }
+
+    //Get Subscription (and Offer and PaymentDevice in relation with the Subscription object) for given User object
+
+    const subscription = await SubscriptionService.getSubscriptionByUser(user);
+    if (!subscription) {
+      return new ReturnObjectHandler(
+        "User does not have an relation with Subscription object",
+        null,
+        401
+      );
+    }
+    return new ReturnObjectHandler(
+      "Found relation for given User with an existing Subscription object",
+      {
+        publicId: userPublicId,
+        subscription: {
+          offerName: subscription.returnValue.offer.offerTitle,
+
+          cost: subscription.returnValue.monthlyCost,
+          maxNumberOfDevicesToDownload:
+            subscription.returnValue.offer.maxNumberOfDevicesToDownload,
+          maxNumberOfDevicesToWatch:
+            subscription.returnValue.offer.maxNumberOfDevicesToWatch,
+          maxResolution: subscription.returnValue.offer.maxResolution,
+          expiresAt: subscription.returnValue.expiresAt,
+        },
+      },
+      200
+    );
+  }
+
+  //Function used to dismiss registration, it deletes Subscription and PaymentDevice related to the found User
+  public static async dismissRegistrationByPublicId(publicId: string) {
+    if (!validator.isUUID(publicId)) {
+      return new ReturnObjectHandler(
+        "Public identification is not valid",
+        null,
+        200
+      );
+    }
+
+    //Get User object related to the UserPublicId with userPublicId based on the provided publicId
+    const user = await UserService.getUserByPublicId(publicId);
+    if (!user) {
+      return new ReturnObjectHandler("User not found", null, 404);
+    }
+
+    //Get Subscription object related to the found User object
+    const subscription = await SubscriptionService.getSubscriptionByUser(user);
+    if (!subscription.returnValue) {
+      return new ReturnObjectHandler("User is not subscribed", null, 401);
+    }
+    //Get PaymentDevice related to the given Subscription
+    const paymentDevice = subscription.returnValue.paymentDevice;
+    if (!paymentDevice) {
+      return new ReturnObjectHandler(
+        "Payment device is not available",
+        null,
+        401
+      );
+    }
+
+    return new ReturnObjectHandler(
+      "All tests passed, subscription has been dismissed",
+      "Success",
       200
     );
   }

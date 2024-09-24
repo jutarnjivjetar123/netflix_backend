@@ -33,10 +33,6 @@ class SubscriptionRouter {
 
       return res.status(subscription.statusCode).send({
         message: subscription.message,
-        subscription: {
-          offer: subscription.returnValue.offer,
-          expiresAt: subscription.returnValue.expiresAt,
-        },
         redirectLink: "http://localhost:5005/signup/complete",
         publicId: userPublicId,
         timestamp: new Date(),

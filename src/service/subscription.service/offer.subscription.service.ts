@@ -46,7 +46,9 @@ export default class OfferService {
     );
   }
 
-  public static async getOfferById(offerId: number) {
+  public static async getOfferById(
+    offerId: number
+  ): Promise<ReturnObjectHandler<Offer | null>> {
     if (!offerId) {
       return new ReturnObjectHandler("Missing parameter offerId", null, 400);
     }
@@ -77,9 +79,13 @@ export default class OfferService {
 
   public static async getAllOfferInstances() {
     const offers = await OfferRepository.getAllOfferInstances();
-    if (offers.length < 1) { 
+    if (offers.length < 1) {
       return new ReturnObjectHandler("No offer was found", null, 404);
     }
-    return new ReturnObjectHandler("Found " + offers.length + " offers", offers, 200);
+    return new ReturnObjectHandler(
+      "Found " + offers.length + " offers",
+      offers,
+      200
+    );
   }
 }

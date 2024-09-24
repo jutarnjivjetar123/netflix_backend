@@ -5,7 +5,9 @@ import User from "../../models/user.model/user.model";
 import Offer from "../../models/subscription.model/offer.model";
 import PaymentDevice from "../../models/subscription.model/paymentDevice.model";
 export default class SubscriptionRepository {
-  public static async getSubscriptionByUser(user: User) {
+  public static async getSubscriptionByUser(
+    user: User
+  ): Promise<Subscription | null> {
     const result = await DatabaseConnection.getRepository(Subscription)
       .findOne({
         where: {
@@ -13,6 +15,8 @@ export default class SubscriptionRepository {
         },
         relations: {
           user: true,
+          offer: true,
+          paymentDevice: true,
         },
       })
       .then((data) => {
@@ -53,7 +57,7 @@ export default class SubscriptionRepository {
     user: User,
     offer: Offer,
     paymentDevice: PaymentDevice
-  ) {
+  ): Promise<Subscription | null> {
     const newSubscription = new Subscription();
     newSubscription.user = user;
     newSubscription.offer = offer;
@@ -63,7 +67,7 @@ export default class SubscriptionRepository {
       30 * 24 * 60 * 60 * 1000
     ).toString();
     newSubscription.monthlyCost = offer.monthlyBillingAmount;
-    newSubscription.isActive = true;
+    newSubscription.isActive = false;
     newSubscription.createdAt = new Date().getTime().toString();
 
     return await DatabaseConnection.getRepository(Subscription)
@@ -91,4 +95,38 @@ export default class SubscriptionRepository {
         return null;
       });
   }
+
+  public static async deleteSubscription(subscription: Subscription) {
+    const deletionResult = await DatabaseConnection.getRepository(Subscription)
+      .remove(subscription)
+      .then((data) => {
+        console.log(
+          "[LOG DATA] - " +
+            new Date() +
+            " -> LOG::Info::Subscription::Repository::Subscription::deleteSubscription::Removed Subscription object from database, removed object data: " +
+            subscription
+        );
+        return true;
+      })
+      .catch((error) => {
+        console.log(
+          "[LOG DATA] - " +
+            new Date() +
+            " -> LOG::Error::Subscription::Repository::Subscription::deleteSubscription::Could not remove Subscription object from database, because the following error occurred: " +
+            error.message +
+            ", Subscription object which deletion was attempted: " +
+            subscription
+        );
+        return false;
+      });
+
+    return deletionResult;
+  }
+
+  public static async updateSubscription(
+    subscription: Subscription,
+    offer?: Offer,
+    expiresAt?: string,
+    isActive?: boolean
+  ) {}
 }

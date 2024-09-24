@@ -4,7 +4,7 @@ import "reflect-metadata";
 import userRoutes from "./routes/user/login.user.routes";
 import registerRoutes from "./routes/user/register.user.routes";
 import offerRoutes from "./routes/subscription/offer.subscription.routes";
-// import subscriptionRoutes from "./routes/subscription/subscription.subscription.routes";
+import subscriptionRoutes from "./routes/subscription/subscription.subscription.routes";
 import paymentRoutes from "./routes/subscription/paymentDevice.subscription.routes";
 
 import {
@@ -26,7 +26,7 @@ app.use(cors());
 app.use("/user/register", registerRoutes);
 app.use("/offer", offerRoutes);
 app.use("/payment", paymentRoutes);
-// app.use("/subscription", subscriptionRoutes);
+app.use("/subscription", subscriptionRoutes);
 app.get("/check/status", (req: express.Request, res: express.Response) => {
   return res.status(200).send({
     successState: true,
@@ -59,7 +59,6 @@ app.get(
 app.get(
   "/settings/languagesList",
   (req: express.Request, res: express.Response) => {
-
     res.status(200).send({});
   }
 );

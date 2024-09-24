@@ -368,5 +368,59 @@ export default class PaymentDeviceService {
     return new ReturnObjectHandler("All test passed", null, 200);
   }
 
-  public static async getPaymentDeviceByUser(user: User) {}
+  //Get all PaymentDevice objects associated with User
+  public static async getAllPaymentDeviceByUser(user: User) {
+    const paymentDevices =
+      await PaymentDeviceRepository.getDefaultPaymentDeviceByUser(user);
+    if (!paymentDevices) {
+      return new ReturnObjectHandler(
+        "No PaymentDevice associated with User was found",
+        null,
+        404
+      );
+    }
+    return new ReturnObjectHandler(
+      "Found " + paymentDevices.length + " PaymentDevice object's for User",
+      paymentDevices,
+      200
+    );
+  }
+
+  //Get PaymentDevice with isDefault attribute set to true associated with given User
+  public static async getDefaultPaymentDeviceByUser(user: User) {
+    const defaultPaymentDevice =
+      await PaymentDeviceRepository.getDefaultPaymentDeviceByUser(user);
+    if (!defaultPaymentDevice) {
+      return new ReturnObjectHandler(
+        "Please select one of the payment devices as the default one",
+        null,
+        404
+      );
+    }
+    return new ReturnObjectHandler(
+      "Default payment device found",
+      defaultPaymentDevice,
+      200
+    );
+  }
+
+  //Attempt to remove PaymentDevice provided in the parameter of the function, returns ReturnObjectHandler with appropriate values (null if failed, removed object if operation succeed)
+  public static async removePaymentDevice(paymentDevice: PaymentDevice) {
+    const isRemoved = await PaymentDeviceRepository.removePaymentDevice(
+      paymentDevice
+    );
+
+    if (!isRemoved) {
+      return new ReturnObjectHandler(
+        "Payment device was not deleted",
+        null,
+        400
+      );
+    }
+    return new ReturnObjectHandler(
+      "Successfully removed payment device",
+      paymentDevice,
+      200
+    );
+  }
 }
