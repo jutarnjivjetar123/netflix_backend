@@ -3,6 +3,7 @@ import { Router, Request, Response } from "express";
 import UserService from "../../service/user.service/register.user.service";
 import UserRegisterService from "../../service/user.service/register.user.service";
 import SubscriptionService from "service/subscription.service/subscription.subscription.service";
+import validator from "validator";
 
 //IMPORTANT NOTICE:
 /*
@@ -101,23 +102,89 @@ class RegisterRouter {
         });
       }
 
-      if (typeof confirmationStatus === "boolean" && confirmationStatus) {
-        return res.status(401).send({
-          message: "Field confirmationStatus must be set to false",
-          timestamp: new Date(),
-        });
-      }
-
-      const isRegistrationDataDismissed =
-        await UserRegisterService.dismissRegistrationByPublicId(publicId);
-      if (!isRegistrationDataDismissed.returnValue) {
-        return res.status(isRegistrationDataDismissed.statusCode).send({
+      if (!confirmationStatus) {
+        const isRegistrationDataDismissed =
+          await UserRegisterService.dismissRegistrationByPublicId(publicId);
+        if (!isRegistrationDataDismissed.returnValue) {
+          return res.status(isRegistrationDataDismissed.statusCode).send({
+            message: isRegistrationDataDismissed.message,
+            timestamp: new Date(),
+          });
+        }
+        return res.status(200).send({
           message: isRegistrationDataDismissed.message,
           timestamp: new Date(),
         });
       }
+
+      //Attempt to active Subscription
+      const isUpdated =
+        await UserRegisterService.activateSubscriptionByPublicId(publicId);
+
+      if (isUpdated.statusCode !== 200) {
+        return res.status(isUpdated.statusCode).send({
+          message: isUpdated.message,
+          timestamp: new Date(),
+        });
+      }
       return res.status(200).send({
-        message: isRegistrationDataDismissed.message,
+        message: isUpdated.message,
+        timestamp: new Date(),
+      });
+    });
+    this.router.post("/code/send", async (req: Request, res: Response) => {
+      const { publicId } = req.body;
+      if (!publicId) {
+        return res.status(400).send({
+          message: "Public identification is required",
+          timestamp: new Date(),
+        });
+      }
+      if (!validator.isUUID(publicId)) {
+        return res.status(400).send({
+          message: "Public identification invalid",
+          timestamp: new Date(),
+        });
+      }
+      const isConfirmationCodeGenerated =
+        await UserRegisterService.generateConfirmationCodeByPublicId(publicId);
+      if (isConfirmationCodeGenerated.statusCode !== 200) {
+        return res.status(isConfirmationCodeGenerated.statusCode).send({
+          message: isConfirmationCodeGenerated.message,
+          timestamp: new Date(),
+        });
+      }
+      
+      
+      return res.status(200).send({
+        message: "Confirmation code sent, please check your email",
+        data: isConfirmationCodeGenerated.returnValue,
+        timestamp: new Date(),
+      });
+    });
+    this.router.post("/code/verify", async (req: Request, res: Response) => {
+      const { confirmationCode, publicId } = req.body;
+      if (!confirmationCode) {
+        return res.status(400).send({
+          message: "Confirmation code is required",
+          timestamp: new Date(),
+        });
+      }
+      if (!publicId) {
+        return res.status(400).send({
+          message: "Public identification is required",
+          timestamp: new Date(),
+        });
+      }
+      if (!validator.isUUID(publicId)) {
+        return res.status(400).send({
+          message: "Public identification is invalid",
+          timestamp: new Date(),
+        });
+      }
+
+      return res.status(200).send({
+        message: "Confirmation status is confirmed",
         timestamp: new Date(),
       });
     });

@@ -8,4 +8,5 @@ export default class UserService {
     const result = await UserRepository.getUserByPublicId(publicId);
     return result;
   }
+  
 }

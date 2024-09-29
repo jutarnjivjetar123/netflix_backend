@@ -6,7 +6,10 @@ import registerRoutes from "./routes/user/register.user.routes";
 import offerRoutes from "./routes/subscription/offer.subscription.routes";
 import subscriptionRoutes from "./routes/subscription/subscription.subscription.routes";
 import paymentRoutes from "./routes/subscription/paymentDevice.subscription.routes";
-
+import EmailHandler from "./helpers/emailSender.helper";
+import nodemailer from "nodemailer";
+import * as dotenv from "dotenv";
+dotenv.config();
 import {
   initializeDatabaseConnection,
   DatabaseConnection,
@@ -64,4 +67,17 @@ app.get(
 );
 app.listen(port, () => {
   console.log(`Server is listening on port ${port}`);
+});
+
+app.post("/dev/sendEmail", (req: express.Request, res: express.Response) => {
+  EmailHandler.sendEmail(
+    "mahirkeran69@gmail.com",
+    "Test message",
+    "This is test email message for FakeFlix service"
+  );
+
+  return res.status(200).send({
+    message: "Email sent",
+    timestamp: new Date(),
+  });
 });
