@@ -7,14 +7,12 @@ import UserRegisterRepository from "../../repository/user/register.user.reposito
 import UserService from "../user.service/main.user.service";
 import validator from "validator";
 import SubscriptionService from "../../service/subscription.service/subscription.subscription.service";
-import PaymentDeviceService from "../../service/subscription.service/paymentDevice.subscription.service";
-import OfferService from "../subscription.service/offer.subscription.service";
-import PaymentDevice from "../../models/subscription.model/paymentDevice.model";
 import EmailHandler from "../../helpers/emailSender.helper";
-import UserRepository from "repository/user/main.user.repository";
+import UserRepository from "../../repository/user/main.user.repository";
 import User from "../../models/user.model/user.model";
-import c from "../../../.history/src/utilities/verificationToken.utility_20240702013924";
-import ConfirmationCode from "models/user.model/confirmationCode.model";
+
+import ConfirmationCode from "../../models/user.model/confirmationCode.model";
+import Subscription from "../../models/subscription.model/subscription.model";
 export default class UserRegisterService {
   static async registerUser(email, countryCode, phoneNumber, password) {
     //Check is any required parameter missing
@@ -362,9 +360,19 @@ export default class UserRegisterService {
     );
   }
 
-  //Function for generating confirmation code that is sent to the User email upon successful registration
-  public static async generateConfirmationCodeByPublicId(userPublicId: string) {
-    //Check is publicId valid
+  public static async generateConfirmationCodeByPublicId(
+    userPublicId: string
+  ): Promise<ReturnObjectHandler<ConfirmationCode | null>> {
+    //Check is userPublicId null
+    if (!userPublicId) {
+      return new ReturnObjectHandler(
+        "Public identification must be provided",
+        null,
+        400
+      );
+    }
+
+    //Check is userPublicId valid uuid
     if (!validator.isUUID(userPublicId)) {
       return new ReturnObjectHandler(
         "Public identification is not valid",
@@ -372,255 +380,333 @@ export default class UserRegisterService {
         400
       );
     }
-    //Get User object related to the UserPublicId with given userPublicId trough userId
+
+    //Get User object by the userPublicId
     const user = await UserService.getUserByPublicId(userPublicId);
     if (!user) {
       return new ReturnObjectHandler("User not found", null, 404);
     }
 
-    //Get Subscription to the User
-    const subscription = await SubscriptionService.getSubscriptionByUser(user);
-    if (!subscription.returnValue) {
-      return new ReturnObjectHandler("User is not subscribed", null, 401);
-    }
-    //Check is the Subscription activated (Subscription.isActive = true)
-    if (!subscription.returnValue.isActive) {
-      return new ReturnObjectHandler(
-        "User has not activated their subscription",
-        null,
-        401
-      );
-    }
-    //Check does found User object have an existing ConfirmationCode
-    const existingConfirmationCode =
+    //Get ConfirmationCode by the User
+    const confirmationCode =
       await UserRegisterRepository.getConfirmationCodeByUser(user);
 
-    //If the User object have an relation with ConfirmationCode object
-    //Then check which of the cases are in affect
-    if (existingConfirmationCode) {
-      //Case #1, isSent and isConfirmed fields are both true, which means that the code was already sent and used
-      if (
-        existingConfirmationCode.isSent &&
-        existingConfirmationCode.isConfirmed
-      ) {
-        return new ReturnObjectHandler("Code has been already sent", null, 409);
-      }
-      //Case #2, isSent is true and isConfirmed is false, which means that the code was sent, but has not been confirmed
-      if (
-        existingConfirmationCode.isSent &&
-        !existingConfirmationCode.isConfirmed
-      ) {
+    //Handle if the ConfirmationCode for the given User exists
+
+    //Handle different cases in situation where the found ConfirmationCode object is not null
+    if (confirmationCode) {
+      //Case 1.: isSent = true and isConfirmed = false, User has not confirmed the email
+      if (confirmationCode.isSent && !confirmationCode.isConfirmed) {
         return new ReturnObjectHandler(
-          "Please check your mail, more likely spam, for confirmation code",
+          "Please check your inbox, and verify your subscription",
           null,
           400
         );
       }
-      //Case #3, isSent and isConfirmed fields are both false, which is considered server side error, and requires that the existing ConfirmationCode be deleted, new instance of ConfirmationCode related to the given User object and the attempt be made to send the confirmation code via email
-      if (
-        !existingConfirmationCode.isSent &&
-        !existingConfirmationCode.isConfirmed
-      ) {
-        //Delete the existing ConfirmationCode
-        const isDeleted =
-          await UserRegisterRepository.deleteConfirmationCodeByUser(user);
-
-        //Create new ConfirmationCode object for the given User object
-        if (!isDeleted) {
-          return new ReturnObjectHandler("Failed to delete it", null, 500);
+      //Case 2.: isSent = true and isConfirmed = true, for the given User object Subscription has been confirmed
+      if (confirmationCode.isSent && confirmationCode.isConfirmed) {
+        return new ReturnObjectHandler(
+          "For this account subscription is already verified, please log in",
+          null,
+          401
+        );
+      }
+      //Case 3.: isSent = false and isConfirmed = false, this case is considered a server side error and requires for another ConfirmationCode instance to be generated and sent to the email address
+      if (!confirmationCode.isSent && !confirmationCode.isConfirmed) {
+        const deleteConfirmationCode = await this.deleteConfirmationCodeByUser(
+          user
+        );
+        console.log(
+          "Result of deleting ConfirmationCode via case 3: " +
+            deleteConfirmationCode.returnValue
+        );
+        if (!deleteConfirmationCode.returnValue) {
+          return new ReturnObjectHandler(
+            "Failed to delete ConfirmationCode",
+            null,
+            500
+          );
         }
+
+        //Attempt to send email
+        const userEmail = await UserRegisterRepository.getUserEmailByUser(user);
+        if (!userEmail) {
+          return new ReturnObjectHandler("User not found", null, 404);
+        }
+
+        //Get Subscription by User
+        const subscription = await SubscriptionService.getSubscriptionByUser(
+          user
+        );
+
+        //Check does User have an existing relation to the Subscription
+        if (!subscription.returnValue) {
+          return new ReturnObjectHandler("User is not subscribed", null, 401);
+        }
+
+        //Check does the User have an active subscription
+        if (!subscription.returnValue.isActive) {
+          return new ReturnObjectHandler(
+            "Subscription is not activated",
+            null,
+            409
+          );
+        }
+        //Create new ConfirmationCode by the given User
         const newConfirmationCode =
           await UserRegisterRepository.createConfirmationCodeByUser(user);
         if (!newConfirmationCode) {
           return new ReturnObjectHandler(
-            "Could not send confirmation code via email, because of some unknown error, please try again",
+            "Could not create new confirmation code",
             null,
             500
           );
         }
-
-        //Get UserEmail related to the given User object
-        const userEmail = await UserRegisterRepository.getUserEmailByUser(user);
-
-        if (!userEmail) {
-          return new ReturnObjectHandler("User not found", null, 404);
-        }
-        //Attempt to send email with new ConfirmationCode
         const emailResult = await EmailHandler.sendEmail(
           userEmail.email,
-          "Refreshed confirmation code for confirming registration to FakeFlix service",
-          "Hello, \n Since You requested new confirmation code to be sent to your email, here it is, please use the below provided confirmation code that this was You, and to activate Subscription to FakeFlix service.\nSelected subscription plan: \n" +
-            subscription.returnValue.offer.offerTitle +
-            "\nMonthly billing amount: " +
-            subscription.returnValue.offer.monthlyBillingAmount +
-            "\n Offer details: \nNumber of supported devices to watch on: " +
-            subscription.returnValue.offer.maxNumberOfDevicesToWatch +
-            "\nNumber of supported devices to download on: " +
-            subscription.returnValue.offer.maxNumberOfDevicesToDownload +
-            "\nMaximum resolution available on the supported devices: " +
-            subscription.returnValue.offer.maxResolution +
-            (subscription.returnValue.offer.isSpatialAudio
-              ? "\nComes with Netflix Spatial audio functionality\n"
-              : "\n") +
-            "\nCONFIRMATION CODE: \n" +
-            "   " +
-            newConfirmationCode.confirmationCode +
-            "\nPlease ignore this email if You didn't register yourself to FakeFlix service\nBest regards"
+          "FakeFlix confirmation code",
+          this.buildEmailContent(
+            subscription.returnValue,
+            newConfirmationCode.confirmationCode
+          )
         );
-        if (!emailResult.returnValue) {
-          return new ReturnObjectHandler(
-            "Failed to send email, if you did receive any emails, the code there wil be considered invalid, so please try again",
-            null,
-            500
+
+        if (!emailResult) {
+          const isDeleted = await this.deleteConfirmationCodeByUser(user);
+          console.log(
+            "EMAIL SENDING FAILED, result of deleting second confirmation code: " +
+              isDeleted.returnValue
           );
+          return new ReturnObjectHandler("Failed to send email", null, 500);
         }
-        const updatedConfirmationCode = await this.updateConfirmationCodeByUser(
+
+        //Update newly created ConfirmationCode property isSent to true
+        const isIsSentUpdated = await this.updateConfirmationCodeByUser(
           user,
           null,
-          null,
-          true
+          true,
+          null
         );
-        if (!updatedConfirmationCode.returnValue) {
-          await this.deleteConfirmationCodeByUser(user);
+        if (!isIsSentUpdated.returnValue) {
+          //Attempt to delete the ConfirmationCode
+          const isDeleted = await this.deleteConfirmationCodeByUser(user);
+          console.log(
+            "ConfirmationCode UPDATING FAILED, result of deleting second confirmation code: " +
+              isDeleted.returnValue
+          );
           return new ReturnObjectHandler(
-            "Sent Confirmation code is considered invalid, please try again",
+            "Failed to update ConfirmationCode",
             null,
             500
           );
         }
+
         return new ReturnObjectHandler(
-          "Refreshed confirmation code has been sent¢",
-          "TEST",
-          400
+          "New confirmation code was sent, please check your inbox",
+          newConfirmationCode,
+          200
         );
       }
     }
-    //Attempt to create a new ConfirmationCode for the given User object
-    const newConfirmationCode =
-      await UserRegisterRepository.createConfirmationCodeByUser(user);
-    console.log(newConfirmationCode);
 
-    //Get UserEmail related to the given User object
+    //Handle if the ConfirmationCode for the given User does not exist
+    //**TODO: Separate into new function createAndSendConfirmationCode
+
+    //Get UserEmail by User
     const userEmail = await UserRegisterRepository.getUserEmailByUser(user);
-
     if (!userEmail) {
       return new ReturnObjectHandler("User not found", null, 404);
     }
 
-    //Try to send confirmation code to the provided email
+    //Get Subscription by User
+    const subscription = await SubscriptionService.getSubscriptionByUser(user);
+
+    //Check does User have an existing relation to the Subscription
+    if (!subscription.returnValue) {
+      return new ReturnObjectHandler("User is not subscribed", null, 401);
+    }
+
+    //Check does the User have an active subscription
+    if (!subscription.returnValue.isActive) {
+      return new ReturnObjectHandler(
+        "Subscription is not activated",
+        null,
+        409
+      );
+    }
+
+    //Create new ConfirmationCode for the given User
+    const newConfirmationCode =
+      await UserRegisterRepository.createConfirmationCodeByUser(user);
+    if (!newConfirmationCode) {
+      return new ReturnObjectHandler(
+        "Failed to send confirmation code, please try again",
+        null,
+        500
+      );
+    }
+
+    //Try to send email
     const emailResult = await EmailHandler.sendEmail(
       userEmail.email,
-      "Confirmation code for confirming registration to FakeFlix service",
-      "Hello, \n Your email was used to register to the FakeFlix service, please use the below provided confirmation code that this was You, and to activate Subscription to FakeFlix service.\nSelected subscription plan: \n" +
-        subscription.returnValue.offer.offerTitle +
-        "\nMonthly billing amount: " +
-        subscription.returnValue.offer.monthlyBillingAmount +
-        "\n Offer details: \nNumber of supported devices to watch on: " +
-        subscription.returnValue.offer.maxNumberOfDevicesToWatch +
-        "\nNumber of supported devices to download on: " +
-        subscription.returnValue.offer.maxNumberOfDevicesToDownload +
-        "\nMaximum resolution available on the supported devices: " +
-        subscription.returnValue.offer.maxResolution +
-        (subscription.returnValue.offer.isSpatialAudio
-          ? "\nComes with Netflix Spatial audio functionality\n"
-          : "\n") +
-        "\nCONFIRMATION CODE: \n" +
-        "   " +
-        newConfirmationCode.confirmationCode +
-        "\nPlease ignore this email if You didn't register yourself to FakeFlix service\nBest regards"
+      "FakeFlix confirmation code",
+      this.buildEmailContent(
+        subscription.returnValue,
+        newConfirmationCode.confirmationCode
+      )
     );
+
     if (!emailResult.returnValue) {
+      const isDeleted = await this.deleteConfirmationCodeByUser(user);
       return new ReturnObjectHandler(
-        "Failed to send email, please try again",
+        "Failed to send confirmation code via email, please try again",
         null,
         500
       );
     }
-    //Attempt to update ConfirmationCode isSent field to true
-    const updatedConfirmationCode = await this.updateConfirmationCodeByUser(
+
+    //Try to update ConfirmationCode property isSent to true
+    const isUpdatedToTrue = await this.updateConfirmationCodeByUser(
       user,
       null,
-      null,
-      true
+      true,
+      null
     );
-    if (!updatedConfirmationCode.returnValue) {
-      await this.deleteConfirmationCodeByUser(user);
+
+    if (!isUpdatedToTrue.returnValue) {
+      const isDeleted = await this.deleteConfirmationCodeByUser(user);
+
       return new ReturnObjectHandler(
-        "Sent Confirmation code is considered invalid, please try again",
+        "Failed to send confirmation code via email, please try again",
         null,
         500
       );
     }
-    return new ReturnObjectHandler("Email sent", emailResult, 200);
+    return new ReturnObjectHandler(
+      "Confirmation code sent to your email, please check your inbox",
+      newConfirmationCode,
+      200
+    );
   }
-
-  //Attempt to update ConfirmationCode with given User object
-  public static async updateConfirmationCodeByUser(
+  //Private function, only to be used within generateConfirmationCodeByUse method, otherwise could cause faulty functioning of the system. Creates new ConfirmationCode for the given User, and if successful then send the ConfirmationCode via email address, and if that is successful then attempt to update the isSent property of the given ConfirmationCode, which if fails, is considered a server error. If this situation occurs then the newly created ConfirmationCode is deleted and User is warned that the ConfirmationCode is invalid, and to attempt to send new ConfirmationCode. But if the ConfirmationCode isSent property is properly updated, then User is notified that they have received the email containing confirmation code
+  private static async createAndSendConfirmationCodeByUser(
     user: User,
-    newConfirmationCode: string = null,
-    newIsConfirmed: boolean = null,
-    newIsSent: boolean = null
-  ): Promise<ReturnObjectHandler<ConfirmationCode | null>> {
-    if (newConfirmationCode && newIsConfirmed && newIsSent) {
+    subscription: Subscription
+  ) {
+    //Check is User null
+    if (!user) {
+      return new ReturnObjectHandler("User must be provided", null, 400);
+    }
+
+    //Check is subscription null
+    if (!subscription) {
       return new ReturnObjectHandler(
-        "At least one value to update must be provided",
+        "Subscription must be provided",
         null,
         400
       );
     }
-    //Get Confirmation code to update
-    const existingConfirmationCode =
-      await UserRegisterRepository.getConfirmationCodeByUser(user);
-    if (!existingConfirmationCode) {
+
+    //Attempt to create new ConfirmationCode object related to the given User object
+    const newConfirmationCode =
+      await UserRegisterRepository.createConfirmationCodeByUser(user);
+    if (!newConfirmationCode) {
       return new ReturnObjectHandler(
-        "No confirmation code was found for the User with id: " + user.userId,
+        "Confirmation code could not be created",
+        null,
+        500
+      );
+    }
+
+    //Get UserEmail object related to the given User object
+    const userEmail = await UserRegisterRepository.getUserEmailByUser(user);
+    if (!userEmail) {
+      return new ReturnObjectHandler("User not found", null, 404);
+    }
+
+    //Attempt to send email containing confirmation
+    const emailResult = await EmailHandler.sendEmail(
+      userEmail.email,
+      "FakeFlix confirmation code",
+      this.buildEmailContent(subscription, newConfirmationCode.confirmationCode)
+    );
+    return emailResult;
+  }
+
+  private static buildEmailContent(
+    subscription: Subscription,
+    confirmationCode: string
+  ): string {
+    return `
+      Hello,
+  
+      Please use the following confirmation code to activate your subscription to FakeFlix:
+      
+      Subscription plan: ${subscription.offer.offerTitle}
+      Monthly billing: ${subscription.offer.monthlyBillingAmount}
+      Devices to watch on: ${subscription.offer.maxNumberOfDevicesToWatch}
+      Max resolution: ${subscription.offer.maxResolution}
+      
+      Confirmation code: ${confirmationCode}
+      
+      If you didn't register for FakeFlix, please ignore this email.
+  
+      Best regards,
+      FakeFlix Team
+    `;
+  }
+
+  //Update ConfirmationCode object with new value, if no new values to update were given returns error
+  public static async updateConfirmationCodeByUser(
+    user: User,
+    newConfirmationCode: string = null,
+    newIsSent: boolean = null,
+    newIsConfirmed: boolean = null
+  ): Promise<ReturnObjectHandler<ConfirmationCode | null>> {
+    //Get current ConfirmationCode by the given User
+    const confirmationCode =
+      await UserRegisterRepository.getConfirmationCodeByUser(user);
+    if (!confirmationCode) {
+      return new ReturnObjectHandler(
+        "Confirmation code does not exist for the user",
         null,
         404
       );
     }
-    //Check is ConfirmationCode changed
+
+    //Check is property confirmationCode changed
     let isConfirmationCodeSet = false;
-    if (!newConfirmationCode) {
-      isConfirmationCodeSet = false;
-    }
     if (newConfirmationCode) {
-      if (
-        newConfirmationCode.length === 4 &&
-        newConfirmationCode !== existingConfirmationCode.confirmationCode
-      ) {
+      if (newConfirmationCode !== confirmationCode.confirmationCode) {
         isConfirmationCodeSet = true;
       }
     }
-    //Check is isSent changed
+
+    //Check is property isSent changed
     let isIsSentSet = false;
-    if (!newIsSent) {
-      isIsSentSet = false;
-    }
     if (newIsSent) {
-      if (newIsSent !== existingConfirmationCode.isSent) {
-        isConfirmationCodeSet = true;
+      if (newIsSent !== confirmationCode.isSent) {
+        isIsSentSet = true;
       }
     }
-    //Check is isConfirmed changed
+
+    //Check is property isConfirmed changed
     let isIsConfirmedSet = false;
-    if (!newIsConfirmed) {
-      isIsConfirmedSet = false;
-    }
     if (newIsConfirmed) {
-      if (newIsConfirmed !== existingConfirmationCode.isConfirmed) {
-        isConfirmationCodeSet = true;
+      if (newIsConfirmed !== confirmationCode.isConfirmed) {
+        isIsConfirmedSet = true;
       }
     }
 
     if (!isConfirmationCodeSet && !isIsConfirmedSet && !isIsSentSet) {
       return new ReturnObjectHandler(
-        "At least one value to update must be provided",
+        "No new values to update were given",
         null,
         400
       );
     }
 
-    //Attempt to update ConfirmationCode
+    //Attempt to update the ConfirmationCode object with new values
     const updatedConfirmationCode =
       await UserRegisterRepository.updateConfirmationCodeByUser(
         user,
@@ -635,42 +721,38 @@ export default class UserRegisterService {
         500
       );
     }
+
     return new ReturnObjectHandler(
-      "Successfully updated confirmation code",
+      "Confirmation code updated successfully",
       updatedConfirmationCode,
       200
     );
   }
 
-  //Attempt to delete ConfirmationCode object related to the given User
-  public static async deleteConfirmationCodeByUser(
-    user: User
-  ): Promise<ReturnObjectHandler<boolean>> {
-    //Get ConfirmationCode by the given User object
+  //Function to delete ConfirmationCode for the given User object, checks does the ConfirmationCode exist
+  public static async deleteConfirmationCodeByUser(user: User) {
+    //Get the ConfirmationCode by the given User
     const confirmationCode =
       await UserRegisterRepository.getConfirmationCodeByUser(user);
     if (!confirmationCode) {
       return new ReturnObjectHandler(
-        "User has not requested confirmation code",
-        false,
-        409
+        "No ConfirmationCode found for User",
+        null,
+        404
       );
     }
-    //Attempt to delete ConfirmationCode object with the given User object userId
+
+    //Attempt to delete the ConfirmationCode connected to the User
     const isDeleted = await UserRegisterRepository.deleteConfirmationCodeByUser(
       user
     );
     if (!isDeleted) {
       return new ReturnObjectHandler(
         "Failed to delete ConfirmationCode",
-        false,
+        isDeleted,
         500
       );
     }
-    return new ReturnObjectHandler(
-      "Successfully deleted ConfirmationCode",
-      true,
-      200
-    );
+    return new ReturnObjectHandler("ConfirmationCode deleted", isDeleted, 200);
   }
 }

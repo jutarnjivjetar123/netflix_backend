@@ -154,11 +154,9 @@ class RegisterRouter {
           timestamp: new Date(),
         });
       }
-      
-      
+
       return res.status(200).send({
         message: "Confirmation code sent, please check your email",
-        data: isConfirmationCodeGenerated.returnValue,
         timestamp: new Date(),
       });
     });
