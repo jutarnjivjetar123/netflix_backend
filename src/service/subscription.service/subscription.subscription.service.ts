@@ -139,24 +139,29 @@ export default class SubscriptionService {
       const offer = subscription.returnValue.offer;
       console.log(
         "Is same? " +
-          (offer.isSpatialAudio === newOffer.isSpatialAudio ||
+          (offer.offerTitle === newOffer.offerTitle ||
+            offer.offerSubtitle == newOffer.offerSubtitle ||
+            offer.monthlyBillingAmount === newOffer.monthlyBillingAmount ||
             offer.maxNumberOfDevicesToDownload ===
               newOffer.maxNumberOfDevicesToDownload ||
-            offer.maxNumberOfDevicesToWatch ===
+            offer.maxNumberOfDevicesToWatch ==
               newOffer.maxNumberOfDevicesToWatch ||
-            offer.maxResolution === newOffer.maxResolution ||
-            offer.monthlyBillingAmount === newOffer.monthlyBillingAmount ||
-            offer.offerTitle === newOffer.offerTitle)
+            offer.resolutionQuality == newOffer.resolutionQuality ||
+            offer.resolutionDescription === newOffer.resolutionDescription ||
+            offer.supportedDevices === newOffer.supportedDevices ||
+            offer.isSpatialAudio === newOffer.isSpatialAudio)
       );
       isOfferSet =
-        offer.isSpatialAudio === newOffer.isSpatialAudio ||
+        offer.offerTitle === newOffer.offerTitle ||
+        offer.offerSubtitle == newOffer.offerSubtitle ||
+        offer.monthlyBillingAmount === newOffer.monthlyBillingAmount ||
         offer.maxNumberOfDevicesToDownload ===
           newOffer.maxNumberOfDevicesToDownload ||
-        offer.maxNumberOfDevicesToWatch ===
-          newOffer.maxNumberOfDevicesToWatch ||
-        offer.maxResolution === newOffer.maxResolution ||
-        offer.monthlyBillingAmount === newOffer.monthlyBillingAmount ||
-        offer.offerTitle === newOffer.offerTitle;
+        offer.maxNumberOfDevicesToWatch == newOffer.maxNumberOfDevicesToWatch ||
+        offer.resolutionQuality == newOffer.resolutionQuality ||
+        offer.resolutionDescription === newOffer.resolutionDescription ||
+        offer.supportedDevices === newOffer.supportedDevices ||
+        offer.isSpatialAudio === newOffer.isSpatialAudio;
       console.log("isOfferSet: " + isOfferSet);
     }
     //Check is the PaymentDevice to which the given Subscription object is connected same as the one inside the database

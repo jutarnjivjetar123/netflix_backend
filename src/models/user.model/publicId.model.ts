@@ -17,7 +17,7 @@ export default class UserPublicId {
   publicId: string;
 
   @OneToOne(() => User)
-  @JoinColumn()
+  @JoinColumn({ name: "userId" })
   user: User;
 
   @Column({ type: "bigint" })

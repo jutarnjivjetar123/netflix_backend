@@ -246,7 +246,7 @@ export default class UserRegisterService {
             subscription.returnValue.offer.maxNumberOfDevicesToDownload,
           maxNumberOfDevicesToWatch:
             subscription.returnValue.offer.maxNumberOfDevicesToWatch,
-          maxResolution: subscription.returnValue.offer.maxResolution,
+          resolution: subscription.returnValue.offer.resolutionDescription,
           expiresAt: subscription.returnValue.expiresAt,
         },
       },
@@ -643,9 +643,15 @@ export default class UserRegisterService {
       Please use the following confirmation code to activate your subscription to FakeFlix:
       
       Subscription plan: ${subscription.offer.offerTitle}
+      Plan resolution: ${subscription.offer.resolutionDescription}
       Monthly billing: ${subscription.offer.monthlyBillingAmount}
-      Devices to watch on: ${subscription.offer.maxNumberOfDevicesToWatch}
-      Max resolution: ${subscription.offer.maxResolution}
+      Number of devices your household can watch on: ${
+        subscription.offer.maxNumberOfDevicesToWatch
+      }
+      Number of devices your household can download content on: ${
+        subscription.offer.maxNumberOfDevicesToDownload
+      }
+      ${subscription.offer.isSpatialAudio ? "Spatial audio included" : ""}
       
       Confirmation code: ${confirmationCode}
       
@@ -754,5 +760,118 @@ export default class UserRegisterService {
       );
     }
     return new ReturnObjectHandler("ConfirmationCode deleted", isDeleted, 200);
+  }
+
+  public static async verifyConfirmationCodeByPublicId(
+    userPublicId: string,
+    confirmationCode: string
+  ): Promise<ReturnObjectHandler<boolean>> {
+    //Check is userPublicId null
+    if (!userPublicId) {
+      return new ReturnObjectHandler(
+        "Public identification must be provided",
+        false,
+        400
+      );
+    }
+
+    //Check is confirmationCode null
+    if (!confirmationCode) {
+      return new ReturnObjectHandler(
+        "Confirmation code must be provided",
+        false,
+        400
+      );
+    }
+
+    //Check is userPublicId valid UUID
+    if (!validator.isUUID(userPublicId)) {
+      return new ReturnObjectHandler(
+        "Public identification is not valid",
+        false,
+        400
+      );
+    }
+
+    //Check is confirmation code composed only of numbers and is length equal to 6
+    if (
+      confirmationCode.length !== 6 &&
+      !validator.isNumeric(confirmationCode)
+    ) {
+      return new ReturnObjectHandler(
+        "Confirmation code must be 6 characters in length and composed only of numbers",
+        false,
+        400
+      );
+    }
+
+    //Get User related to the given userPublicId
+    const user = await UserService.getUserByPublicId(userPublicId);
+    if (!user) {
+      return new ReturnObjectHandler("User not found", false, 404);
+    }
+
+    //Get Subscription by the found User
+    const subscription = await SubscriptionService.getSubscriptionByUser(user);
+    if (!subscription.returnValue) {
+      return new ReturnObjectHandler("User is not subscribed", false, 401);
+    }
+
+    if (!subscription.returnValue.isActive) {
+      return new ReturnObjectHandler(
+        "User has not activated subscription",
+        false,
+        403
+      );
+    }
+
+    //Get ConfirmationCode by the given User
+    const confirmationCodeFromTheDatabase =
+      await UserRegisterRepository.getConfirmationCodeByUser(user);
+    if (!confirmationCodeFromTheDatabase) {
+      return new ReturnObjectHandler(
+        "User has not requested confirmation code",
+        false,
+        409
+      );
+    }
+
+    //Compare confirmationCode value provided by the client with the one retrieved from the database
+    if (confirmationCode !== confirmationCodeFromTheDatabase.confirmationCode) {
+      return new ReturnObjectHandler(
+        "Confirmation code is not valid",
+        false,
+        401
+      );
+    }
+
+    //Update ConfirmationCode property isConfirmed from the database to true
+    const isUpdated = await this.updateConfirmationCodeByUser(
+      user,
+      null,
+      null,
+      true
+    );
+    if (!isUpdated.returnValue) {
+      const isDeleted = await this.deleteConfirmationCodeByUser(user);
+      if (!isDeleted.returnValue) {
+        return new ReturnObjectHandler(
+          "Could not delete confirmation code",
+          false,
+          500
+        );
+      }
+
+      return new ReturnObjectHandler(
+        "Could not validate code, please try sending code to the email again and try to verify it again",
+        false,
+        500
+      );
+    }
+    return new ReturnObjectHandler(
+      "Code is correct, you can start using our service's",
+      true,
+      200
+    );
   }
 }

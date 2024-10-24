@@ -12,19 +12,28 @@ export default class OfferRepository {
   //Create new Offer instance
   public static async createOffer(
     offerTitle: string,
+    offerSubtitle: string,
     monthlyBillingAmount: number,
-    maxNumberOfDevicesToWatch: number,
     maxNumberOfDevicesToDownload: number,
-    maxResolution: number,
-    isSpatialAudio: boolean
+    maxNumberOfDevicesToWatch: number,
+    resolutionQuality: string,
+    resolutionDescription: string,
+    supportedDevices: string,
+    isSpatialAudio: boolean,
+    offerColor: string
   ): Promise<Offer | null> {
     const newOffer = new Offer();
     newOffer.offerTitle = offerTitle;
+    newOffer.offerSubtitle = offerSubtitle;
     newOffer.monthlyBillingAmount = monthlyBillingAmount;
-    newOffer.maxNumberOfDevicesToWatch = maxNumberOfDevicesToWatch;
     newOffer.maxNumberOfDevicesToDownload = maxNumberOfDevicesToDownload;
-    newOffer.maxResolution = maxResolution;
+    newOffer.maxNumberOfDevicesToWatch = maxNumberOfDevicesToWatch;
+    newOffer.resolutionQuality = resolutionQuality;
+    newOffer.resolutionDescription = resolutionDescription;
+    newOffer.supportedDevices = supportedDevices;
     newOffer.isSpatialAudio = isSpatialAudio;
+    newOffer.offerColor = offerColor;
+
     newOffer.createdAt = new Date().getTime().toString();
     console.log(newOffer);
     return await DatabaseConnection.getRepository(Offer)

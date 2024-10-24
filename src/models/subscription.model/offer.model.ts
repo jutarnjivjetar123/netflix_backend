@@ -17,20 +17,30 @@ export default class Offer {
   @Column()
   offerTitle: string;
 
+  @Column()
+  offerSubtitle: string;
+
   @Column({ type: "money" })
   monthlyBillingAmount: number;
-
-  @Column()
-  maxNumberOfDevicesToWatch: number;
 
   @Column()
   maxNumberOfDevicesToDownload: number;
 
   @Column()
-  maxResolution: number;
+  maxNumberOfDevicesToWatch: number;
 
   @Column()
+  resolutionQuality: string;
+  @Column()
+  resolutionDescription: string;
+
+  @Column()
+  supportedDevices: string;
+  @Column()
   isSpatialAudio: boolean;
+
+  @Column()
+  offerColor: string;
 
   @Column({ type: "bigint" })
   createdAt: string;

@@ -11,6 +11,7 @@ import Offer from "../models/subscription.model/offer.model";
 import PaymentDevice from "../models/subscription.model/paymentDevice.model";
 import Subscription from "../models/subscription.model/subscription.model";
 import ConfirmationCode from "../models/user.model/confirmationCode.model";
+import PaymentMethod from "../models/subscription.model/paymentMethod.model";
 export const DatabaseConnection = new DataSource({
   type: "postgres",
   host: "localhost",
@@ -30,6 +31,7 @@ export const DatabaseConnection = new DataSource({
     PaymentDevice,
     Subscription,
     ConfirmationCode,
+    PaymentMethod,
   ],
   logging: false,
   synchronize: true,

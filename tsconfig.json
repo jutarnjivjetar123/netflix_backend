@@ -1,12 +1,13 @@
 {
   "compilerOptions": {
-    "module": "NodeNext",
+    "module": "Node16",
     "moduleResolution": "Node16",
     "baseUrl": "src",
     "outDir": "dist",
     "sourceMap": true,
     "experimentalDecorators": true,
-    "emitDecoratorMetadata": true
+    "emitDecoratorMetadata": true,
+    "allowSyntheticDefaultImports": true
   },
   "include": ["src/**/*"]
 }

@@ -11,29 +11,41 @@ import ReturnObjectHandler from "../../utilities/returnObject.utility";
 export default class OfferService {
   public static async createNewOffer(
     offerTitle: string,
+    offerSubtitle: string,
     monthlyBillingAmount: number,
     maxNumberOfDevicesToDownload: number,
     maxNumberOfDevicesToWatch: number,
-    maxResolution: number,
-    isSpatialAudio: boolean
+    resolutionQuality: string,
+    resolutionDescription: string,
+    supportedDevices: string,
+    isSpatialAudio: boolean,
+    offerColor: string
   ) {
     if (
       !offerTitle &&
+      !offerSubtitle &&
       !monthlyBillingAmount &&
       !maxNumberOfDevicesToDownload &&
       !maxNumberOfDevicesToWatch &&
-      !maxResolution &&
-      !isSpatialAudio
+      !resolutionQuality &&
+      !resolutionDescription &&
+      !supportedDevices &&
+      !isSpatialAudio &&
+      !offerColor
     ) {
       return new ReturnObjectHandler("Missing required parameters", null, 400);
     }
     const result = await OfferRepository.createOffer(
       offerTitle,
+      offerSubtitle,
       monthlyBillingAmount,
-      maxNumberOfDevicesToWatch,
       maxNumberOfDevicesToDownload,
-      maxResolution,
-      isSpatialAudio
+      maxNumberOfDevicesToWatch,
+      resolutionQuality,
+      resolutionDescription,
+      supportedDevices,
+      isSpatialAudio,
+      offerColor
     );
 
     if (!result) {

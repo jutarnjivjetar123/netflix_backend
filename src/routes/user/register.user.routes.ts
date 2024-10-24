@@ -56,7 +56,7 @@ class RegisterRouter {
       return res.status(registrationResult.statusCode).send({
         message: registrationResult.message,
         publicId: registrationResult.returnValue,
-        redirectLink: "http://localhost:5005/signup/payment",
+        redirectLink: "http://localhost:5501/src/signup/offer.html",
         timestamp: new Date(),
       });
     });
@@ -168,6 +168,15 @@ class RegisterRouter {
           timestamp: new Date(),
         });
       }
+      if (
+        !validator.isNumeric(confirmationCode) ||
+        (confirmationCode as string).length !== 6
+      ) {
+        return res.status(400).send({
+          message: "Confirmation code is in invalid format",
+          timestamp: new Date(),
+        });
+      }
       if (!publicId) {
         return res.status(400).send({
           message: "Public identification is required",
@@ -181,8 +190,16 @@ class RegisterRouter {
         });
       }
 
-      return res.status(200).send({
-        message: "Confirmation status is confirmed",
+      //Verify is confirmationCode valid against the one in the database
+
+      const verificationProcessResult =
+        await UserRegisterService.verifyConfirmationCodeByPublicId(
+          publicId,
+          confirmationCode
+        );
+      return res.status(verificationProcessResult.statusCode).send({
+        message: verificationProcessResult.message,
+        isConfirmed: verificationProcessResult.returnValue,
         timestamp: new Date(),
       });
     });
