@@ -25,4 +25,7 @@ export default class PaymentMethod {
 
   @Column({ nullable: true })
   serviceProviderWebsite: string | null;
+
+  @Column({ default: true })
+  isImplemented: boolean;
 }

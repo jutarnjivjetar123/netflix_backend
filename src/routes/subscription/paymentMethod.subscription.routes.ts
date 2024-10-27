@@ -44,9 +44,21 @@ class PaymentMethodRouter {
           timestamp: new Date(),
         });
       }
+      const organizedPaymentMethods = paymentMethodsArray.returnValue.reduce(
+        (acc: Record<string, any[]>, method) => {
+          const { methodType } = method;
+          if (!acc[methodType]) {
+            acc[methodType] = [];
+          }
+          acc[methodType].push(method);
+          return acc;
+        },
+        {}
+      );
+
       return res.status(200).send({
         message: "Found " + paymentMethodsArray.returnValue.length + " records",
-        paymentMethods: paymentMethodsArray.returnValue,
+        paymentMethods: organizedPaymentMethods,
         timestamp: new Date(),
       });
     });
@@ -54,3 +66,5 @@ class PaymentMethodRouter {
 }
 
 export default new PaymentMethodRouter().router;
+
+
