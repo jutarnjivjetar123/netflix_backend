@@ -6,7 +6,6 @@ import EncryptionHelpers from "../../helpers/encryption.helper";
 import UserRegisterRepository from "../../repository/user/register.user.repository";
 import UserService from "../user.service/main.user.service";
 import validator from "validator";
-import SubscriptionService from "../../service/subscription.service/subscription.subscription.service";
 import EmailHandler from "../../helpers/emailSender.helper";
 import UserRepository from "../../repository/user/main.user.repository";
 import User from "../../models/user.model/user.model";
@@ -216,150 +215,6 @@ export default class UserRegisterService {
     );
   }
 
-  //Function to provide necessary data for User when confirming Subscription
-  public static async getRegistrationDataByUserPublicId(userPublicId: string) {
-    if (!validator.isUUID(userPublicId)) {
-      return new ReturnObjectHandler("Public Id not valid");
-    }
-
-    //Get User associated with given publicId
-    const user = await UserService.getUserByPublicId(userPublicId);
-    if (!user) {
-      return new ReturnObjectHandler("User not found", null, 404);
-    }
-
-    //Get Subscription (and Offer and PaymentDevice in relation with the Subscription object) for given User object
-
-    const subscription = await SubscriptionService.getSubscriptionByUser(user);
-    if (!subscription.returnValue) {
-      return new ReturnObjectHandler("User is not subscribed", null, 401);
-    }
-    return new ReturnObjectHandler(
-      "Found relation for given User with an existing Subscription object",
-      {
-        publicId: userPublicId,
-        subscription: {
-          offerName: subscription.returnValue.offer.offerTitle,
-
-          cost: subscription.returnValue.monthlyCost,
-          maxNumberOfDevicesToDownload:
-            subscription.returnValue.offer.maxNumberOfDevicesToDownload,
-          maxNumberOfDevicesToWatch:
-            subscription.returnValue.offer.maxNumberOfDevicesToWatch,
-          resolution: subscription.returnValue.offer.resolutionDescription,
-          expiresAt: subscription.returnValue.expiresAt,
-        },
-      },
-      200
-    );
-  }
-
-  //Function used to dismiss registration, it deletes Subscription and PaymentDevice related to the found User
-  public static async dismissRegistrationByPublicId(publicId: string) {
-    if (!validator.isUUID(publicId)) {
-      return new ReturnObjectHandler(
-        "Public identification is not valid",
-        null,
-        200
-      );
-    }
-
-    //Get User object related to the UserPublicId with userPublicId based on the provided publicId
-    const user = await UserService.getUserByPublicId(publicId);
-    if (!user) {
-      return new ReturnObjectHandler("User not found", null, 404);
-    }
-
-    //Get Subscription object related to the found User object
-    const subscription = await SubscriptionService.getSubscriptionByUser(user);
-    if (!subscription.returnValue) {
-      return new ReturnObjectHandler("User is not subscribed", null, 401);
-    }
-    //Get PaymentDevice related to the given Subscription
-    const paymentDevice = subscription.returnValue.paymentDevice;
-    if (!paymentDevice) {
-      return new ReturnObjectHandler(
-        "Payment device is not available",
-        null,
-        401
-      );
-    }
-
-    //Attempt to dismiss Subscription, by dismissing, it implies deleting Subscription and PaymentDevice object's related to the given User object
-    //Attempt to find and delete the Subscription
-    const isSubscriptionDeleted =
-      await SubscriptionService.deleteSubscriptionByUser(user);
-
-    if (!isSubscriptionDeleted.returnValue) {
-      return new ReturnObjectHandler(
-        "Failed to delete Subscription",
-        null,
-        400
-      );
-    }
-    return new ReturnObjectHandler("User has unsubscribed", "Success", 200);
-  }
-
-  public static async activateSubscriptionByPublicId(userPublicId: string) {
-    if (!validator.isUUID(userPublicId)) {
-      return new ReturnObjectHandler(
-        "Public identification is not valid",
-        null,
-        400
-      );
-    }
-
-    //Get User with given publicId
-    const user = await UserService.getUserByPublicId(userPublicId);
-    if (!user) {
-      return new ReturnObjectHandler("User not found", null, 404);
-    }
-
-    //Get Subscription by User
-    const subscription = await SubscriptionService.getSubscriptionByUser(user);
-    if (!subscription.returnValue) {
-      return new ReturnObjectHandler("User is not subscribed", null, 401);
-    }
-
-    if (subscription.returnValue.isActive) {
-      return new ReturnObjectHandler(
-        "Cannot activate already active subscription",
-        null,
-        409
-      );
-    }
-    //Extract PaymentDevice from Subscription
-    const paymentDevice = subscription.returnValue.paymentDevice;
-    if (!paymentDevice) {
-      return new ReturnObjectHandler("No payment device found", null, 404);
-    }
-
-    //Attempt to update Subscription attribute isDefault value to true
-    const updatedSubscription =
-      await SubscriptionService.updateSubscriptionByUser(
-        user,
-        null,
-        null,
-        new Date(new Date().setMonth(new Date().getMonth() + 1))
-          .getTime()
-          .toString(),
-        true
-      );
-    console.log(updatedSubscription.returnValue);
-    if (!updatedSubscription.returnValue) {
-      return new ReturnObjectHandler(
-        "Could not activate subscription, please try again",
-        null,
-        500
-      );
-    }
-    return new ReturnObjectHandler(
-      "Subscription is activated, enjoy Netflix",
-      updatedSubscription,
-      200
-    );
-  }
-
   public static async generateConfirmationCodeByPublicId(
     userPublicId: string
   ): Promise<ReturnObjectHandler<ConfirmationCode | null>> {
@@ -434,24 +289,6 @@ export default class UserRegisterService {
           return new ReturnObjectHandler("User not found", null, 404);
         }
 
-        //Get Subscription by User
-        const subscription = await SubscriptionService.getSubscriptionByUser(
-          user
-        );
-
-        //Check does User have an existing relation to the Subscription
-        if (!subscription.returnValue) {
-          return new ReturnObjectHandler("User is not subscribed", null, 401);
-        }
-
-        //Check does the User have an active subscription
-        if (!subscription.returnValue.isActive) {
-          return new ReturnObjectHandler(
-            "Subscription is not activated",
-            null,
-            409
-          );
-        }
         //Create new ConfirmationCode by the given User
         const newConfirmationCode =
           await UserRegisterRepository.createConfirmationCodeByUser(user);
@@ -465,10 +302,7 @@ export default class UserRegisterService {
         const emailResult = await EmailHandler.sendEmail(
           userEmail.email,
           "FakeFlix confirmation code",
-          this.buildEmailContent(
-            subscription.returnValue,
-            newConfirmationCode.confirmationCode
-          )
+          this.buildEmailContent(null, newConfirmationCode.confirmationCode)
         );
 
         if (!emailResult) {
@@ -518,23 +352,6 @@ export default class UserRegisterService {
       return new ReturnObjectHandler("User not found", null, 404);
     }
 
-    //Get Subscription by User
-    const subscription = await SubscriptionService.getSubscriptionByUser(user);
-
-    //Check does User have an existing relation to the Subscription
-    if (!subscription.returnValue) {
-      return new ReturnObjectHandler("User is not subscribed", null, 401);
-    }
-
-    //Check does the User have an active subscription
-    if (!subscription.returnValue.isActive) {
-      return new ReturnObjectHandler(
-        "Subscription is not activated",
-        null,
-        409
-      );
-    }
-
     //Create new ConfirmationCode for the given User
     const newConfirmationCode =
       await UserRegisterRepository.createConfirmationCodeByUser(user);
@@ -550,10 +367,7 @@ export default class UserRegisterService {
     const emailResult = await EmailHandler.sendEmail(
       userEmail.email,
       "FakeFlix confirmation code",
-      this.buildEmailContent(
-        subscription.returnValue,
-        newConfirmationCode.confirmationCode
-      )
+      this.buildEmailContent(null, newConfirmationCode.confirmationCode)
     );
 
     if (!emailResult.returnValue) {
@@ -809,20 +623,6 @@ export default class UserRegisterService {
     const user = await UserService.getUserByPublicId(userPublicId);
     if (!user) {
       return new ReturnObjectHandler("User not found", false, 404);
-    }
-
-    //Get Subscription by the found User
-    const subscription = await SubscriptionService.getSubscriptionByUser(user);
-    if (!subscription.returnValue) {
-      return new ReturnObjectHandler("User is not subscribed", false, 401);
-    }
-
-    if (!subscription.returnValue.isActive) {
-      return new ReturnObjectHandler(
-        "User has not activated subscription",
-        false,
-        403
-      );
     }
 
     //Get ConfirmationCode by the given User

@@ -13,7 +13,7 @@ import {
 import User from "./user.model";
 
 @Entity("UserSalt", {
-  schema: "Users",
+  schema: "User",
 })
 export default class UserSalt {
   @PrimaryGeneratedColumn("uuid")

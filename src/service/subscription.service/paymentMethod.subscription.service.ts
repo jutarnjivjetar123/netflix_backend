@@ -1,88 +1,142 @@
 import ReturnObjectHandler from "../../utilities/returnObject.utility";
-import PaymentMethod from "../../models/subscription.model/paymentMethod.model";
 import PaymentMethodRepository from "../../repository/subscription/paymentMethod.repository.subscription";
+import PaymentMethod from "../../models/subscription.model/paymentMethod.model";
 import validator from "validator";
-import { PaymentMethodTypes } from "../../utilities/other.utility";
+import { PaymentMethodTypes } from "../../enums/PaymentMethod";
+import { RelationUpdater } from "typeorm/query-builder/RelationUpdater.js";
 
 export default class PaymentMethodService {
   public static async createPaymentMethod(
-    methodType: string,
-    serviceProviderName: string,
-    serviceProviderLogo: string,
-    serviceProviderWebsite: string
-  ) {
+    methodType: PaymentMethodTypes,
+    providerName: string,
+    providerLogo: string,
+    providerWebsite: string
+  ): Promise<ReturnObjectHandler<PaymentMethod | null>> {
     if (!methodType) {
-      return new ReturnObjectHandler("Method type must be provided", null);
-    }
-
-    if (!serviceProviderName) {
       return new ReturnObjectHandler(
-        "Service provider name must be provided",
-        null
+        "Valid method type must be provided",
+        null,
+        400
+      );
+    }
+    if (!providerName) {
+      return new ReturnObjectHandler(
+        "Valid service provider name must be provided",
+        null,
+        400
+      );
+    }
+    if (!providerLogo) {
+      return new ReturnObjectHandler(
+        "Valid provider logo in svg format must be provided",
+        null,
+        400
+      );
+    }
+    if (!providerWebsite || !validator.isURL(providerWebsite)) {
+      return new ReturnObjectHandler(
+        "Valid provider website url must be provided",
+        null,
+        400
       );
     }
 
-    let matchingMethodType: PaymentMethodTypes = Object.values(
-      PaymentMethodTypes
-    ).find((type) => {
-      if (type === methodType) {
-        return type;
-      }
-    });
-    if (!matchingMethodType) {
-      return new ReturnObjectHandler("Method type not valid", null);
-    }
-
-    if (
-      await PaymentMethodRepository.isExistingByTypeAndProvider(
-        matchingMethodType,
-        serviceProviderName
-      )
-    ) {
-      return new ReturnObjectHandler(
-        "Service provider " +
-          serviceProviderName +
-          " has an existing for type " +
+    //Check for PaymentMethod with the same type and service provider
+    const existingPaymentMethod =
+      (
+        await PaymentMethodRepository.getPaymentMethodByTypeAndServiceProvider(
           methodType,
-        null
-      );
-    }
-    const newPaymentMethod =
-      await PaymentMethodRepository.createNewPaymentMethod(
-        matchingMethodType,
-        serviceProviderName,
-        serviceProviderLogo,
-        serviceProviderWebsite
-      );
-
-    if (!newPaymentMethod) {
+          providerName
+        )
+      ).length > 0;
+    if (existingPaymentMethod) {
       return new ReturnObjectHandler(
-        "Failed to create new payment method",
-        null
+        "Payment method " +
+          methodType.toString() +
+          " for provider " +
+          providerName +
+          " already exists",
+        null,
+        401
       );
     }
+    const newPaymentMethod = new PaymentMethod();
+    newPaymentMethod.type = methodType;
+    newPaymentMethod.serviceProvider = providerName;
+    newPaymentMethod.serviceProviderSvgLogo = providerLogo;
+    newPaymentMethod.serviceProviderWebsite = providerWebsite;
 
+    const createdPaymentMethod =
+      await PaymentMethodRepository.createPaymentMethod(newPaymentMethod);
+    if (!createdPaymentMethod) {
+      return new ReturnObjectHandler(
+        "Failed to create payment method",
+        null,
+        500
+      );
+    }
     return new ReturnObjectHandler(
-      "Created new payment method of type: " +
-        methodType +
-        " for service provider " +
-        serviceProviderName,
-      null
+      "Created new payment method",
+      createdPaymentMethod
     );
   }
 
-  public static async getAll(): Promise<ReturnObjectHandler<PaymentMethod[]>> {
+  public static async getAllPaymentMethods() {
     const paymentMethodsArray =
-      await PaymentMethodRepository.getAllPaymentMethod();
+      await PaymentMethodRepository.getAllPaymentMethods();
     if (paymentMethodsArray === null) {
       return new ReturnObjectHandler(
-        "Failed to retrieve payment methods",
-        null
+        "Failed to search payment methods, please try again",
+        null,
+        500
+      );
+    }
+    if (paymentMethodsArray.length === 0) {
+      return new ReturnObjectHandler(
+        "No payment methods were found",
+        paymentMethodsArray,
+        404
+      );
+    }
+
+    return new ReturnObjectHandler(
+      "Found " + paymentMethodsArray.length + " payment methods",
+      paymentMethodsArray,
+      200
+    );
+  }
+
+  public static async deletePaymentMethodById(
+    paymentMethodId: string
+  ): Promise<ReturnObjectHandler<PaymentMethod | null>> {
+    const paymentMethod = await PaymentMethodRepository.getPaymentMethodById(
+      paymentMethodId
+    );
+    if (!validator.isUUID(paymentMethodId)) {
+      return new ReturnObjectHandler("Id is not valid", null, 400);
+    }
+    if (!paymentMethod) {
+      return new ReturnObjectHandler(
+        "Failed to find payment method",
+        null,
+        404
+      );
+    }
+
+    const deleteResult = await PaymentMethodRepository.deletePaymentMethod(
+      paymentMethod
+    );
+    if (!deleteResult) {
+      return new ReturnObjectHandler(
+        "Failed to delete payment method",
+        null,
+        500
       );
     }
     return new ReturnObjectHandler(
-      "Found " + paymentMethodsArray.length + " records",
-      paymentMethodsArray
+      "Payment method was successfully deleted",
+      paymentMethod,
+      200
     );
   }
 }

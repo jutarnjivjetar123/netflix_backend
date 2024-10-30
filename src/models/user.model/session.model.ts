@@ -14,7 +14,7 @@ import User from "./user.model";
 
 //TODO: Set UNIQUE restriction back again for ONEToONE relation with User table, currently the relation is ManyToOne
 @Entity("UserSessions", {
-  schema: "Users",
+  schema: "User",
 })
 export default class UserSession {
   @PrimaryGeneratedColumn("uuid")

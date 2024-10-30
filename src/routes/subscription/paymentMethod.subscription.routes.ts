@@ -1,6 +1,8 @@
 import { Response, Request, Router } from "express";
+import { PaymentMethodTypes } from "../../enums/PaymentMethod";
 import PaymentMethodService from "../../service/subscription.service/paymentMethod.subscription.service";
-
+import { StandardErrors } from "../../enums/StandardErrors";
+import validator from "validator";
 class PaymentMethodRouter {
   router = Router();
 
@@ -8,63 +10,166 @@ class PaymentMethodRouter {
     this.routes();
   }
   routes() {
-    this.router.post("/create", async (req: Request, res: Response) => {
+    this.router.get("/types", (req: Request, res: Response) => {
+      const paymentMethods = Object.values(PaymentMethodTypes).reduce(
+        (acc, method) => {
+          acc[method] = method.toString(); // You can set a different value if needed
+          return acc;
+        },
+        {} as Record<string, string>
+      );
+
+      res.json(paymentMethods);
+      return res.status(200).send({
+        message: "Available payment method types",
+        data: {
+          types: {
+            paymentMethods,
+          },
+        },
+        timestamp: new Date(),
+      });
+    });
+    this.router.post("", async (req: Request, res: Response) => {
       const {
-        methodName,
         methodType,
-        serviceProviderName,
-        serviceProviderLogo,
+        serviceProvider,
+        serviceProviderSvgLogo,
         serviceProviderWebsite,
       } = req.body;
-      const newPaymentMethod = await PaymentMethodService.createPaymentMethod(
-        methodType,
-        serviceProviderName,
-        serviceProviderLogo,
-        serviceProviderWebsite
+
+      //Check are parameters missing
+      if (!methodType) {
+        return res.status(400).send({
+          message: "Parameter methodType is invalid",
+          timestamp: new Date(),
+        });
+      }
+      if (!serviceProvider) {
+        return res.status(400).send({
+          message: "Parameter serviceProvider is invalid",
+          timestamp: new Date(),
+        });
+      }
+      if (!serviceProviderSvgLogo) {
+        return res.status(400).send({
+          message: "Parameter serviceProviderSvgLogo is invalid",
+          timestamp: new Date(),
+        });
+      }
+      if (!serviceProviderWebsite) {
+        return res.status(400).send({
+          message: "Parameter serviceProviderWebsite is invalid",
+          timestamp: new Date(),
+        });
+      }
+
+      //Check is given method type one of the available ones
+      var isValidMethod: boolean = Object.values(PaymentMethodTypes).includes(
+        methodType as PaymentMethodTypes
       );
+
+      if (!isValidMethod) {
+        return res.status(400).send({
+          message: "Method type is not valid",
+          timestamp: new Date(),
+        });
+      }
+
+      const paymentMethodReturnValue =
+        await PaymentMethodService.createPaymentMethod(
+          methodType as PaymentMethodTypes,
+          serviceProvider,
+          serviceProviderSvgLogo,
+          serviceProviderWebsite
+        );
+      if (!paymentMethodReturnValue.returnValue) {
+        return res.status(paymentMethodReturnValue.statusCode).send({
+          message: paymentMethodReturnValue.message,
+          timestamp: new Date(),
+        });
+      }
       return res.status(200).send({
-        message: newPaymentMethod.message,
+        message: "New payment method created",
+        data: {
+          paymentMethod: paymentMethodReturnValue.returnValue,
+        },
         timestamp: new Date(),
       });
     });
 
-    this.router.get("/all", async (req: Request, res: Response) => {
-      const paymentMethodsArray = await PaymentMethodService.getAll();
-
-      if (!paymentMethodsArray.returnValue) {
-        return res.status(500).send({
-          message: "Failed to retrieve payment methods, please try again",
-          timestamp: new Date(),
-        });
-      }
-
-      if (paymentMethodsArray.returnValue.length === 0) {
-        return res.status(404).send({
-          message: "Failed to find any records for payment methods",
-          timestamp: new Date(),
-        });
-      }
-      const organizedPaymentMethods = paymentMethodsArray.returnValue.reduce(
-        (acc: Record<string, any[]>, method) => {
-          const { methodType } = method;
-          if (!acc[methodType]) {
-            acc[methodType] = [];
-          }
-          acc[methodType].push(method);
-          return acc;
+    this.router.get("", async (req: Request, res: Response) => {
+      const paymentMethods = await PaymentMethodService.getAllPaymentMethods();
+      return res.status(paymentMethods.statusCode).send({
+        message: paymentMethods.message,
+        data: {
+          paymentMethods: paymentMethods.returnValue,
         },
-        {}
+        timestamp: new Date(),
+      });
+    });
+
+    this.router.delete("/:id", async (req: Request, res: Response) => {
+      const paymentMethodId = req.params.id;
+      if (!paymentMethodId) {
+        return res.status(400).send({
+          message: "Failed to delete payment method",
+          data: {
+            errors: {
+              title: StandardErrors.PARAMETERNOTPROVIDED,
+              context: "Parameter id must be provided",
+            },
+          },
+        });
+      }
+
+      if (!validator.isUUID(paymentMethodId)) {
+        return res.status(400).send({
+          message: "Failed to delete payment method",
+          data: {
+            errors: {
+              title: StandardErrors.PARAMETERNOTVALIDFORMAT,
+              context: "Parameter id must be in uuid format",
+            },
+          },
+        });
+      }
+
+      const deletionResult = await PaymentMethodService.deletePaymentMethodById(
+        paymentMethodId
       );
+      if (deletionResult.statusCode === 404) {
+        return res.status(404).send({
+          message: "Failed to delete payment method",
+          data: {
+            errors: {
+              title: StandardErrors.REASOURCENOTFOUND,
+              context: "No payment method with given id was found",
+            },
+          },
+        });
+      }
+
+      if (deletionResult.statusCode === 500) {
+        return res.status(404).send({
+          message: "Failed to delete payment method",
+          data: {
+            errors: {
+              title: StandardErrors.SERVERSIDEERROR,
+              context: "An error occurred on our side, please try again",
+            },
+          },
+        });
+      }
 
       return res.status(200).send({
-        message: "Found " + paymentMethodsArray.returnValue.length + " records",
-        paymentMethods: organizedPaymentMethods,
-        timestamp: new Date(),
+        message: "Payment method was successfully deleted",
+        data: {
+          deletedPaymentMethod: deletionResult.returnValue,
+        },
       });
     });
   }
 }
 
 export default new PaymentMethodRouter().router;
-
-

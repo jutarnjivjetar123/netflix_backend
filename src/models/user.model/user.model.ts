@@ -8,8 +8,8 @@ import {
   JoinColumn,
 } from "typeorm";
 
-@Entity("Users", {
-  schema: "Users",
+@Entity("User", {
+  schema: "User",
 })
 export default class User {
   @PrimaryGeneratedColumn("uuid")

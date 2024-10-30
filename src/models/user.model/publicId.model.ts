@@ -10,7 +10,7 @@ import {
 
 import User from "../user.model/user.model";
 @Entity("UserPublicId", {
-  schema: "Users",
+  schema: "User",
 })
 export default class UserPublicId {
   @PrimaryGeneratedColumn("uuid")

@@ -1,26 +1,16 @@
-import { PaymentMethodTypes } from "../../utilities/other.utility";
 import { DatabaseConnection } from "../../database/config.database";
+import { PaymentMethodTypes } from "../../enums/PaymentMethod";
 import PaymentMethod from "../../models/subscription.model/paymentMethod.model";
 
 export default class PaymentMethodRepository {
-  public static async createNewPaymentMethod(
-    methodType: PaymentMethodTypes,
-    serviceProviderName: string,
-    serviceProviderLogo: string,
-    serviceProviderWebsite: string
-  ) {
-    const newPaymentMethod = new PaymentMethod();
-    newPaymentMethod.methodType = methodType;
-    newPaymentMethod.serviceProviderName = serviceProviderName;
-    newPaymentMethod.serviceProviderLogo = serviceProviderLogo;
-    newPaymentMethod.serviceProviderWebsite = serviceProviderWebsite;
+  public static async createPaymentMethod(newPaymentMethod: PaymentMethod) {
     return await DatabaseConnection.getRepository(PaymentMethod)
       .save(newPaymentMethod)
       .then((data) => {
         console.log(
           "[LOG DATA] - " +
             new Date() +
-            " -> LOG::Info::Repository::Subscription::PaymentMethod::Successfully created new PaymentMethod, payment method: "
+            " -> LOG::Info::Repository::Subscription::PaymentMethod::createdPaymentMethod::Created new PaymentMethod object with following attributes:"
         );
         console.log(data);
         return data;
@@ -29,74 +19,134 @@ export default class PaymentMethodRepository {
         console.log(
           "[LOG DATA] - " +
             new Date() +
-            " -> LOG::Error::Repository::Subscription::PaymentMethod::Failed to create new PaymentMethod, with error message: " +
+            " -> LOG::Error::Repository::Subscription::PaymentMethod::createPaymentMethod::Failed to create new PaymentMethod with error message: " +
             error.message +
-            ", provided parameters: "
+            ", with following object properties:"
         );
         console.log(newPaymentMethod);
         return null;
       });
   }
 
-  public static async isExistingByTypeAndProvider(
-    type: PaymentMethodTypes,
-    serviceProviderName: string
-  ): Promise<boolean> {
+  public static async getPaymentMethodById(
+    Id: string
+  ): Promise<PaymentMethod | null> {
     return await DatabaseConnection.getRepository(PaymentMethod)
-      .find({
+      .findOne({
         where: {
-          methodType: type,
-          serviceProviderName: serviceProviderName,
+          paymentMethodId: Id,
         },
       })
       .then((data) => {
         console.log(
           "[LOG DATA] - " +
             new Date() +
-            " -> LOG::Info::Repository::Subscription::PaymentMethod::isExistingByTypeAndProvider::Found payment method for service provider" +
-            serviceProviderName +
-            " and type of " +
-            type
+            " -> LOG::Info::Repository::Subscription::PaymentMethod::getPaymentMethodById::Found PaymentMethod for the following Id: " +
+            data.paymentMethodId +
+            " with following properties: "
         );
-
-        return data.length > 0;
-      })
-      .catch((error) => {
-        console.log(
-          "[LOG DATA] - " +
-            new Date() +
-            " -> LOG::Error::Repository::Subscription::PaymentMethod::Failed to find existing payment method for service provider " +
-            serviceProviderName +
-            " and type " +
-            type +
-            " with error: " +
-            error.message
-        );
-        return false;
-      });
-  }
-
-  public static async getAllPaymentMethod(): Promise<PaymentMethod[] | null> {
-    return await DatabaseConnection.getRepository(PaymentMethod)
-      .find()
-      .then((data) => {
-        console.log(
-          "[LOG DATA] - " +
-            new Date() +
-            " -> LOG::Info::Repository::Subscription::PaymentMethod::Found " +
-            data.length +
-            " PaymentMethod records"
-        );
+        console.log(data);
         return data;
       })
       .catch((error) => {
         console.log(
           "[LOG DATA] - " +
             new Date() +
-            " -> LOG::Error::Repository::Subscription::PaymentMethod::Failed to find records for PaymentMethod, with error message: " +
+            " -> LOG::Error::Repository::Subscription::getPaymentMethodById::Failed to find PaymentMethod with the following Id: " +
+            Id +
+            ", error message that occurred during the operation: " +
             error.message
         );
         return null;
+      });
+  }
+  //Searches by type and serviceProvider parameters and returns if a PaymentMethod has been found
+  public static async getPaymentMethodByTypeAndServiceProvider(
+    methodType: PaymentMethodTypes,
+    serviceProvider: string
+  ): Promise<PaymentMethod[] | null> {
+    return await DatabaseConnection.getRepository(PaymentMethod)
+      .find({
+        where: {
+          type: methodType,
+          serviceProvider: serviceProvider,
+        },
+      })
+      .then((data) => {
+        console.log(
+          "[LOG INFO] - " +
+            new Date() +
+            " -> LOG::Info::Repository::Subscription::PaymentMethod::getPaymentMethodByTypeAndServiceProvider::Found " +
+            data.length +
+            " records with matching parameters: \ntype: " +
+            methodType +
+            "\nserviceProvider: " +
+            serviceProvider
+        );
+        return data;
+      })
+      .catch((error) => {
+        console.log(
+          "[LOG INFO] - " +
+            new Date() +
+            " -> LOG::Error::Repository::Subscription::PaymentMethod::getPaymentMethodByTypeAndServiceProvider::Failed to find PaymentMethod for following parameters: \ntype: " +
+            methodType +
+            "\nserviceProvider: " +
+            serviceProvider +
+            "\nwith following error: " +
+            error.message
+        );
+        return null;
+      });
+  }
+
+  public static async getAllPaymentMethods(): Promise<PaymentMethod[]> {
+    return await DatabaseConnection.getRepository(PaymentMethod)
+      .find()
+      .then((data) => {
+        console.log(
+          "[LOG INFO] - " +
+            new Date() +
+            " -> LOG::Error::Repository::Subscription::PaymentMethod::getAllPaymentMethods::Found following number of PaymentMethod records: " +
+            data.length
+        );
+        return data;
+      })
+      .catch((error) => {
+        console.log(
+          "[LOG INFO] - " +
+            new Date() +
+            " -> LOG::Error::Repository::Subscription::PaymentMethod::getAllPaymentMethods::Failed to find any PaymentMethod record with following error: " +
+            error.message
+        );
+        return null;
+      });
+  }
+
+  public static async deletePaymentMethod(
+    paymentMethodToDelete: PaymentMethod
+  ) {
+    return await DatabaseConnection.getRepository(PaymentMethod)
+      .remove(paymentMethodToDelete)
+      .then((data) => {
+        console.log(
+          "[LOG INFO] - " +
+            new Date() +
+            " -> LOG::Info::Repository::Subscription::PaymentMethod::deletePaymentMethod::Removed PaymentMethod object successfully from database, object that was deleted: "
+        );
+        console.log(paymentMethodToDelete);
+        return true;
+      })
+      .catch((error) => {
+        console.log(
+          "[LOG INFO] - " +
+            new Date() +
+            " -> LOG::Error::Repository::Subscription::deletePaymentMethod::Failed to delete PaymentMethod object from database, error message: " +
+            error.message +
+            ", \nobject that was to be deleted: "
+        );
+        console.log(paymentMethodToDelete);
+        return false;
       });
   }
 }

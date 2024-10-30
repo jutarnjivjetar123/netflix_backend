@@ -11,7 +11,7 @@ import {
 
 import User from "./user.model";
 @Entity("UserPassword", {
-  schema: "Users",
+  schema: "User",
 })
 export default class UserPassword {
   @PrimaryGeneratedColumn("uuid")

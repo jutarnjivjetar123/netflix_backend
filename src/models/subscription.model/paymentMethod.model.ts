@@ -1,31 +1,26 @@
 import { Entity, PrimaryGeneratedColumn, Column } from "typeorm";
-import { PaymentMethodTypes } from "../../utilities/other.utility";
-
+import { PaymentMethodTypes } from "../../enums/PaymentMethod";
 @Entity({
   name: "PaymentMethod",
   schema: "Subscription",
 })
 export default class PaymentMethod {
-  @PrimaryGeneratedColumn("increment")
-  paymentMethodId: number;
+  @PrimaryGeneratedColumn("uuid")
+  paymentMethodId: string;
 
   @Column({
     type: "enum",
     enum: PaymentMethodTypes,
+    default: PaymentMethodTypes.CREDIT_DEBIT_CARD,
   })
-  methodType: PaymentMethodTypes;
+  type: PaymentMethodTypes;
 
   @Column()
-  serviceProviderName: string;
+  serviceProvider: string;
 
-  @Column({
-    nullable: true,
-  })
-  serviceProviderLogo: string | null;
+  @Column()
+  serviceProviderSvgLogo: string;
 
-  @Column({ nullable: true })
-  serviceProviderWebsite: string | null;
-
-  @Column({ default: true })
-  isImplemented: boolean;
+  @Column()
+  serviceProviderWebsite: string;
 }

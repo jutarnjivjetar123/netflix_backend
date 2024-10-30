@@ -2,7 +2,7 @@ import { Router, Request, Response } from "express";
 
 import UserService from "../../service/user.service/register.user.service";
 import UserRegisterService from "../../service/user.service/register.user.service";
-import SubscriptionService from "service/subscription.service/subscription.subscription.service";
+// import SubscriptionService from "service/subscription.service/subscription.subscription.service";
 import validator from "validator";
 
 //IMPORTANT NOTICE:
@@ -70,68 +70,13 @@ class RegisterRouter {
         });
       }
 
-      const registrationData =
-        await UserService.getRegistrationDataByUserPublicId(publicId);
-      if (registrationData.statusCode !== 200) {
-        return res.status(registrationData.statusCode).send({
-          message: registrationData.message,
-          timestamp: new Date(),
-        });
-      }
-
       return res.status(200).send({
         message: "Signup confirmation pending",
-        registrationData: registrationData.returnValue,
+        registrationData: null,
         timestamp: new Date(),
       });
     });
 
-    this.router.post("/confirm", async (req: Request, res: Response) => {
-      const { publicId, confirmationStatus } = req.body;
-      if (!publicId) {
-        return res.status(400).send({
-          message: "Public identification is required",
-          timestamp: new Date(),
-        });
-      }
-
-      if (typeof confirmationStatus !== "boolean") {
-        return res.status(400).send({
-          message: "Confirmation status is required",
-          timestamp: new Date(),
-        });
-      }
-
-      if (!confirmationStatus) {
-        const isRegistrationDataDismissed =
-          await UserRegisterService.dismissRegistrationByPublicId(publicId);
-        if (!isRegistrationDataDismissed.returnValue) {
-          return res.status(isRegistrationDataDismissed.statusCode).send({
-            message: isRegistrationDataDismissed.message,
-            timestamp: new Date(),
-          });
-        }
-        return res.status(200).send({
-          message: isRegistrationDataDismissed.message,
-          timestamp: new Date(),
-        });
-      }
-
-      //Attempt to active Subscription
-      const isUpdated =
-        await UserRegisterService.activateSubscriptionByPublicId(publicId);
-
-      if (isUpdated.statusCode !== 200) {
-        return res.status(isUpdated.statusCode).send({
-          message: isUpdated.message,
-          timestamp: new Date(),
-        });
-      }
-      return res.status(200).send({
-        message: isUpdated.message,
-        timestamp: new Date(),
-      });
-    });
     this.router.post("/code/send", async (req: Request, res: Response) => {
       const { publicId } = req.body;
       if (!publicId) {

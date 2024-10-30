@@ -10,7 +10,6 @@ import {
 
 import User from "../user.model/user.model";
 import Offer from "../subscription.model/offer.model";
-import PaymentDevice from "../subscription.model/paymentDevice.model";
 @Entity({
   name: "Subscription",
   schema: "Subscription",
@@ -26,10 +25,6 @@ export default class Subscription {
   @OneToOne((type) => Offer, {})
   @JoinColumn({ name: "offerId" })
   offer: Offer;
-
-  @OneToOne((type) => PaymentDevice, {})
-  @JoinColumn({ name: "paymentDeviceId" })
-  paymentDevice: PaymentDevice;
 
   @Column({ type: "bigint" })
   expiresAt: string;

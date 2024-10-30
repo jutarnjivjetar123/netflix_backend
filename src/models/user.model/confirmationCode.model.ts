@@ -9,10 +9,10 @@ import {
 import User from "../user.model/user.model";
 
 @Entity({
-  schema: "Users",
-  name: "ConfirmationCode",
+  schema: "User",
+  name: "UserConfirmationCode",
 })
-export default class ConfirmationCode {
+export default class UserConfirmationCode {
   @PrimaryGeneratedColumn("uuid", { name: "confirmationCodeId" })
   confirmationCodeId: string;
 
