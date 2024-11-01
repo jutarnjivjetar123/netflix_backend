@@ -23,4 +23,12 @@ export default class PaymentMethod {
 
   @Column()
   serviceProviderWebsite: string;
+
+  @Column("bigint")
+  createdAt: string;
+
+  @Column("bigint", {
+    nullable: true,
+  })
+  modifiedAt: string | null;
 }

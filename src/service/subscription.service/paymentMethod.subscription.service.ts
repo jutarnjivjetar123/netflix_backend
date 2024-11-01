@@ -3,7 +3,7 @@ import PaymentMethodRepository from "../../repository/subscription/paymentMethod
 import PaymentMethod from "../../models/subscription.model/paymentMethod.model";
 import validator from "validator";
 import { PaymentMethodTypes } from "../../enums/PaymentMethod";
-import { RelationUpdater } from "typeorm/query-builder/RelationUpdater.js";
+
 
 export default class PaymentMethodService {
   public static async createPaymentMethod(
@@ -81,6 +81,26 @@ export default class PaymentMethodService {
     );
   }
 
+  public static async getPaymentMethodById(
+    paymentMethodId: string
+  ): Promise<ReturnObjectHandler<PaymentMethod>> {
+    const paymentMethod = await PaymentMethodRepository.getPaymentMethodById(
+      paymentMethodId
+    );
+    if (!paymentMethod) {
+      return new ReturnObjectHandler(
+        "No payment method with given id was found",
+        null,
+        404
+      );
+    }
+
+    return new ReturnObjectHandler(
+      "Found payment method with given id",
+      paymentMethod,
+      200
+    );
+  }
   public static async getAllPaymentMethods() {
     const paymentMethodsArray =
       await PaymentMethodRepository.getAllPaymentMethods();

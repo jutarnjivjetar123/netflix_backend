@@ -1,7 +1,7 @@
 import {
   Entity,
   Column,
-  PrimaryColumn,
+  OneToOne,
   ManyToOne,
   JoinColumn,
   PrimaryGeneratedColumn,
@@ -9,6 +9,7 @@ import {
 import PaymentMethod from "./paymentMethod.model";
 import { PaymentMethodTypes } from "../../enums/PaymentMethod";
 
+import User from "../user.model/user.model";
 @Entity({
   name: "CreditOrDebitCard",
   schema: "Subscription",
@@ -17,7 +18,11 @@ export default class CreditOrDebitCard {
   @PrimaryGeneratedColumn("uuid")
   creditOrDebitCardId: string;
 
-  
+  @ManyToOne(() => User)
+  @JoinColumn({
+    name: "userId",
+  })
+  user: User;
   @ManyToOne(() => PaymentMethod)
   @JoinColumn({
     name: "paymentMethodId",
@@ -28,11 +33,23 @@ export default class CreditOrDebitCard {
   cardNumber: string;
 
   @Column()
-  ccv: string;
+  ccv: number;
 
-  @Column()
-  expiryDate: Date;
+  @Column("bigint")
+  expiryDate: string;
 
   @Column()
   nameOnCard: string;
+
+  @Column({
+    default: false,
+  })
+  isDefaultForUser: boolean;
+  @Column("bigint")
+  createdAt: string;
+
+  @Column("bigint", {
+    nullable: true,
+  })
+  modifiedAt: string | null;
 }

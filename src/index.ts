@@ -5,9 +5,10 @@ import userLoginRoutes from "./routes/user/login.user.routes";
 import registerRoutes from "./routes/user/register.user.routes";
 import offerRoutes from "./routes/subscription/offer.subscription.routes";
 import subscriptionRoutes from "./routes/subscription/subscription.subscription.routes";
-import paymentRoutes from "./routes/subscription/paymentDevice.subscription.routes";
+import creditOrDebitCardRoutes from "./routes/subscription/creditOrDebitCard.paymentMethod.subscription.routes";
 import EmailHandler from "./helpers/emailSender.helper";
 import paymentMethodRoutes from "./routes/subscription/paymentMethod.subscription.routes";
+
 import nodemailer from "nodemailer";
 import ms from "ms";
 import * as jwt from "jsonwebtoken";
@@ -33,9 +34,9 @@ app.use(cors());
 app.use("/user/register", registerRoutes);
 app.use("/user/login", userLoginRoutes);
 app.use("/offer", offerRoutes);
-app.use("/payment", paymentRoutes);
 app.use("/subscription", subscriptionRoutes);
 app.use("/payment/method", paymentMethodRoutes);
+app.use("/payment/cardoption", creditOrDebitCardRoutes);
 app.get("/check/status", (req: express.Request, res: express.Response) => {
   return res.status(200).send({
     successState: true,

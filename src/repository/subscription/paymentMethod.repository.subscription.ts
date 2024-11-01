@@ -4,6 +4,7 @@ import PaymentMethod from "../../models/subscription.model/paymentMethod.model";
 
 export default class PaymentMethodRepository {
   public static async createPaymentMethod(newPaymentMethod: PaymentMethod) {
+    newPaymentMethod.createdAt = Date.now().toString();
     return await DatabaseConnection.getRepository(PaymentMethod)
       .save(newPaymentMethod)
       .then((data) => {
