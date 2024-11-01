@@ -8,8 +8,8 @@ import {
   JoinColumn,
 } from "typeorm";
 
-@Entity("Users", {
-  schema: "Users",
+@Entity("User", {
+  schema: "User",
 })
 export default class User {
   @PrimaryGeneratedColumn("uuid")
@@ -17,11 +17,13 @@ export default class User {
 
   @Column()
   usedEmailToSignUp: boolean;
-  @Column()
-  createdAt: Date;
+
+  @Column({ type: "bigint" })
+  createdAt: string;
 
   @Column({
     nullable: true,
+    type: "bigint",
   })
-  modifiedAt: Date | null;
+  modifiedAt: string | null;
 }

@@ -12,7 +12,7 @@ import {
 import User from "./user.model";
 
 @Entity("UserEmail", {
-  schema: "Users",
+  schema: "User",
 })
 export default class UserEmail {
   @PrimaryGeneratedColumn("uuid")
@@ -25,11 +25,12 @@ export default class UserEmail {
   @Column()
   email: string;
 
-  @CreateDateColumn()
-  createdAt: Date;
+  @Column({ type: "bigint" })
+  createdAt: string;
 
-  @UpdateDateColumn({
+  @Column({
     nullable: true,
+    type: "bigint",
   })
-  modifiedAt: Date;
+  modifiedAt: string;
 }

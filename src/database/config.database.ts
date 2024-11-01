@@ -8,8 +8,12 @@ import UserSession from "../models/user.model/session.model";
 import UserPhoneNumber from "../models/user.model/phone.model";
 import UserPublicId from "../models/user.model/publicId.model";
 import Offer from "../models/subscription.model/offer.model";
-import PaymentDevice from "../models/subscription.model/paymentDevice.model";
 import Subscription from "../models/subscription.model/subscription.model";
+import ConfirmationCode from "../models/user.model/confirmationCode.model";
+import PaymentMethod from "../models/subscription.model/paymentMethod.model";
+import CreditOrDebitCard from "../models/subscription.model/creditOrDebitCard.paymentMethod.subscription.model";
+import DigitalWallet from "../models/subscription.model/digitalWallet.paymentMethod.model";
+
 export const DatabaseConnection = new DataSource({
   type: "postgres",
   host: "localhost",
@@ -26,8 +30,11 @@ export const DatabaseConnection = new DataSource({
     UserPhoneNumber,
     UserPublicId,
     Offer,
-    PaymentDevice,
     Subscription,
+    ConfirmationCode,
+    PaymentMethod,
+    CreditOrDebitCard,
+    DigitalWallet,
   ],
   logging: false,
   synchronize: true,

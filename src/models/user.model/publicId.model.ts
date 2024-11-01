@@ -10,21 +10,22 @@ import {
 
 import User from "../user.model/user.model";
 @Entity("UserPublicId", {
-  schema: "Users",
+  schema: "User",
 })
 export default class UserPublicId {
   @PrimaryGeneratedColumn("uuid")
   publicId: string;
 
   @OneToOne(() => User)
-  @JoinColumn()
+  @JoinColumn({ name: "userId" })
   user: User;
 
-  @Column()
-  createdAt: Date;
+  @Column({ type: "bigint" })
+  createdAt: string;
 
   @Column({
     nullable: true,
+    type: "bigint",
   })
-  modifiedAt: Date | null;
+  modifiedAt: string | null;
 }

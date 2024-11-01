@@ -10,7 +10,6 @@ import {
 
 import User from "../user.model/user.model";
 import Offer from "../subscription.model/offer.model";
-import PaymentDevice from "../subscription.model/paymentDevice.model";
 @Entity({
   name: "Subscription",
   schema: "Subscription",
@@ -27,11 +26,7 @@ export default class Subscription {
   @JoinColumn({ name: "offerId" })
   offer: Offer;
 
-  @OneToOne((type) => PaymentDevice, {})
-  @JoinColumn({ name: "paymentDeviceId" })
-  paymentDevice: PaymentDevice;
-
-  @Column()
+  @Column({ type: "bigint" })
   expiresAt: string;
 
   @Column({ type: "money" })
@@ -40,9 +35,19 @@ export default class Subscription {
   @Column()
   isActive: boolean;
 
-  @CreateDateColumn()
+  @Column({
+    nullable: true,
+  })
+  timezone: string;
+
+  @Column({
+    nullable: true,
+  })
+  timezoneOffset: number;
+
+  @Column({ type: "bigint" })
   createdAt: string;
 
-  @UpdateDateColumn({ nullable: true })
+  @Column({ nullable: true, type: "bigint" })
   modifiedAt: string | null;
 }

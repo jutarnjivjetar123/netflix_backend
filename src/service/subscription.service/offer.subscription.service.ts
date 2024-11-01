@@ -11,29 +11,41 @@ import ReturnObjectHandler from "../../utilities/returnObject.utility";
 export default class OfferService {
   public static async createNewOffer(
     offerTitle: string,
+    offerSubtitle: string,
     monthlyBillingAmount: number,
     maxNumberOfDevicesToDownload: number,
     maxNumberOfDevicesToWatch: number,
-    maxResolution: number,
-    isSpatialAudio: boolean
+    resolutionQuality: string,
+    resolutionDescription: string,
+    supportedDevices: string,
+    isSpatialAudio: boolean,
+    offerColor: string
   ) {
     if (
       !offerTitle &&
+      !offerSubtitle &&
       !monthlyBillingAmount &&
       !maxNumberOfDevicesToDownload &&
       !maxNumberOfDevicesToWatch &&
-      !maxResolution &&
-      !isSpatialAudio
+      !resolutionQuality &&
+      !resolutionDescription &&
+      !supportedDevices &&
+      !isSpatialAudio &&
+      !offerColor
     ) {
       return new ReturnObjectHandler("Missing required parameters", null, 400);
     }
     const result = await OfferRepository.createOffer(
       offerTitle,
+      offerSubtitle,
       monthlyBillingAmount,
-      maxNumberOfDevicesToWatch,
       maxNumberOfDevicesToDownload,
-      maxResolution,
-      isSpatialAudio
+      maxNumberOfDevicesToWatch,
+      resolutionQuality,
+      resolutionDescription,
+      supportedDevices,
+      isSpatialAudio,
+      offerColor
     );
 
     if (!result) {
@@ -46,7 +58,9 @@ export default class OfferService {
     );
   }
 
-  public static async getOfferById(offerId: number) {
+  public static async getOfferById(
+    offerId: number
+  ): Promise<ReturnObjectHandler<Offer | null>> {
     if (!offerId) {
       return new ReturnObjectHandler("Missing parameter offerId", null, 400);
     }
@@ -77,9 +91,13 @@ export default class OfferService {
 
   public static async getAllOfferInstances() {
     const offers = await OfferRepository.getAllOfferInstances();
-    if (offers.length < 1) { 
+    if (offers.length < 1) {
       return new ReturnObjectHandler("No offer was found", null, 404);
     }
-    return new ReturnObjectHandler("Found " + offers.length + " offers", offers, 200);
+    return new ReturnObjectHandler(
+      "Found " + offers.length + " offers",
+      offers,
+      200
+    );
   }
 }

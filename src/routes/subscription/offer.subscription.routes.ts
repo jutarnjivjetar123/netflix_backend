@@ -1,5 +1,7 @@
 import { Request, Response, Router } from "express";
 import OfferService from "../../service/subscription.service/offer.subscription.service";
+import Offer from "../../models/subscription.model/offer.model";
+import { filterOffers } from "../../utilities/other.utility";
 class OfferRoutes {
   router = Router();
 
@@ -11,19 +13,27 @@ class OfferRoutes {
     this.router.post("/create", async (req: Request, res: Response) => {
       const {
         offerTitle,
+        offerSubtitle,
         monthlyBillingAmount,
         maxNumberOfDevicesToDownload,
         maxNumberOfDevicesToWatch,
-        maxResolution,
+        resolutionQuality,
+        resolutionDescription,
+        supportedDevices,
         isSpatialAudio,
+        offerColor
       } = req.body;
       if (
         !offerTitle &&
+        !offerSubtitle &&
         !monthlyBillingAmount &&
         !maxNumberOfDevicesToDownload &&
         !maxNumberOfDevicesToWatch &&
-        !maxResolution &&
-        !isSpatialAudio
+        !resolutionQuality &&
+        !resolutionDescription &&
+        !supportedDevices &&
+        !isSpatialAudio &&
+        !offerColor
       ) {
         return res.status(400).send({
           message: "Missing required parameters",
@@ -32,11 +42,15 @@ class OfferRoutes {
       }
       const newOffer = await OfferService.createNewOffer(
         offerTitle,
+        offerSubtitle,
         monthlyBillingAmount,
         maxNumberOfDevicesToDownload,
         maxNumberOfDevicesToWatch,
-        maxResolution,
-        isSpatialAudio
+        resolutionQuality,
+        resolutionDescription,
+        supportedDevices,
+        isSpatialAudio,
+        offerColor
       );
       if (!newOffer) {
         return res.status(500).send({
@@ -51,20 +65,25 @@ class OfferRoutes {
     });
 
     this.router.get("/offers", async (req: Request, res: Response) => {
-      const offers = await OfferService.getAllOfferInstances();
-      if (offers.statusCode === 404) {
+      const offersResult = await OfferService.getAllOfferInstances();
+      if (offersResult.statusCode === 404) {
         return res.status(404).send({
-          message: offers.message,
+          message: offersResult.message,
           offers: null,
           timestamp: new Date(),
         });
       }
+      //Modify the return structure of the Offer object array to not include createdAt and modifiedAt properties
+      const offers: Offer[] = offersResult.returnValue;
+      const filteredOffers = filterOffers(offers);
+
       return res.status(200).send({
-        message: offers.message,
-        offers: offers.returnValue,
+        message: offersResult.message,
+        offers: filteredOffers,
         timestamp: new Date(),
       });
     });
+
     this.router.get("/:offerId", async (req: Request, res: Response) => {
       const offerId = Number(req.params.offerId);
       if (!offerId) {

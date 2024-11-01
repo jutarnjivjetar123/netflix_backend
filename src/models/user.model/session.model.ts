@@ -4,6 +4,7 @@ import {
   Column,
   JoinColumn,
   OneToOne,
+  ManyToOne,
   CreateDateColumn,
   UpdateDateColumn,
   PrimaryColumn,
@@ -11,23 +12,28 @@ import {
 
 import User from "./user.model";
 
+//TODO: Set UNIQUE restriction back again for ONEToONE relation with User table, currently the relation is ManyToOne
 @Entity("UserSessions", {
-  schema: "Users",
+  schema: "User",
 })
 export default class UserSession {
   @PrimaryGeneratedColumn("uuid")
   sessionID: string;
 
   @OneToOne(() => User)
-  @JoinColumn()
-  sessionOwner: User;
-
-  @CreateDateColumn()
-  createdAt: Date;
-
-  @Column()
-  expiresAt: Date;
+  @JoinColumn({ name: "userId" })
+  user: User;
 
   @Column()
   refreshToken: string;
+
+  @Column({
+    type: "bigint",
+  })
+  createdAt: string;
+
+  @Column({
+    type: "bigint",
+  })
+  expiresAt: string;
 }
