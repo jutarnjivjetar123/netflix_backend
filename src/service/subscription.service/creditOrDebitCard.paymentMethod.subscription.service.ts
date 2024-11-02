@@ -5,6 +5,7 @@ import ReturnObjectHandler from "../../utilities/returnObject.utility";
 import validator from "validator";
 import PaymentMethodService from "./paymentMethod.subscription.service";
 import PaymentMethod from "../../models/subscription.model/paymentMethod.model";
+import User from "../../models/user.model/user.model";
 import { PaymentMethodTypes } from "../../enums/PaymentMethod";
 export default class CreditOrDebitCardService {
   //Create new CreditOrDebitCard object with given data
@@ -183,5 +184,33 @@ export default class CreditOrDebitCardService {
       );
     }
     return new ReturnObjectHandler("New card saved", userPublicId, 200);
+  }
+
+  public static async getAllCreditOrDebitCardsByUser(
+    user: User
+  ): Promise<ReturnObjectHandler<CreditOrDebitCard[]>> {
+    const creditOrDebitCards =
+      await CreditOrDebitCardRepository.getCreditOrDebitCardsByUser(user);
+    if (creditOrDebitCards === null) {
+      return new ReturnObjectHandler(
+        "Failed to get credit or debit cards",
+        null,
+        500
+      );
+    }
+
+    if (creditOrDebitCards.length === 0) {
+      return new ReturnObjectHandler(
+        "No credit or debit cards found",
+        null,
+        404
+      );
+    }
+
+    return new ReturnObjectHandler(
+      "Credit or debit cards found",
+      creditOrDebitCards,
+      200
+    );
   }
 }

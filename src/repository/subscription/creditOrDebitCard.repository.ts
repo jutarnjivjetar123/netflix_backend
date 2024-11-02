@@ -1,7 +1,7 @@
 import { DatabaseConnection } from "../../database/config.database";
 import CreditOrDebitCard from "../../models/subscription.model/creditOrDebitCard.paymentMethod.subscription.model";
 import User from "../../models/user.model/user.model";
-export default class CreditOrDebitCardService {
+export default class CreditOrDebitCardRepository {
   public static async getCreditOrDebitCardsByUser(
     user: User
   ): Promise<CreditOrDebitCard[]> {

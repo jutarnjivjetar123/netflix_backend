@@ -18,7 +18,7 @@ export default class DigitalWallet {
   @PrimaryGeneratedColumn("uuid")
   digitalWalletId: string;
 
-  @OneToOne(() => User)
+  @ManyToOne(() => User)
   @JoinColumn({
     name: "userId",
   })
@@ -28,6 +28,7 @@ export default class DigitalWallet {
   @JoinColumn({
     name: "paymentMethodId",
   })
+  paymentMethod: PaymentMethod;
   @Column()
   walletId: string;
 

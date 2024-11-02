@@ -2,7 +2,8 @@ import { DatabaseConnection } from "../../database/config.database";
 import User from "../../models/user.model/user.model";
 import UserPublicId from "../../models/user.model/publicId.model";
 import UserSalt from "../../models/user.model/salt.model";
-
+import UserEmail from "../../models/user.model/email.model";
+import PaymentMethod from "../../models/subscription.model/paymentMethod.model";
 export default class UserRepository {
   public static async getUserSaltByUser(user: User): Promise<UserSalt | null> {
     return await DatabaseConnection.getRepository(UserSalt)
@@ -62,4 +63,37 @@ export default class UserRepository {
     console.log(result);
     return result;
   }
+
+  public static async getUserEmailByUser(user: User): Promise<UserEmail> {
+    return await DatabaseConnection.getRepository(UserEmail)
+      .findOne({
+        where: {
+          user: user,
+        },
+        relations: {
+          user: true,
+        },
+      })
+      .then((data) => {
+        console.log(
+          "[LOG DATA] - " +
+            new Date() +
+            " -> LOG::Info::Repository::User::Main::getUserEmailByUser::Found UserEmail object for user with id: " +
+            data.user.userId
+        );
+        return data;
+      })
+      .catch((error) => {
+        console.log(
+          "[LOG DATA] - " +
+            new Date() +
+            " -> LOG::Error::Repository::User::Main::getUserEmailByUser::Error occurred while trying to retrieve UserEmail object connected to User with id: " +
+            user.userId +
+            " with following error: " +
+            error.message
+        );
+        return null;
+      });
+  }
+
 }

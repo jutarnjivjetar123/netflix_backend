@@ -6,6 +6,7 @@ import registerRoutes from "./routes/user/register.user.routes";
 import offerRoutes from "./routes/subscription/offer.subscription.routes";
 import subscriptionRoutes from "./routes/subscription/subscription.subscription.routes";
 import creditOrDebitCardRoutes from "./routes/subscription/creditOrDebitCard.paymentMethod.subscription.routes";
+import digitalWalletRoutes from "./routes/subscription/digitalWallet.paymentMethod.subscription.route";
 import EmailHandler from "./helpers/emailSender.helper";
 import paymentMethodRoutes from "./routes/subscription/paymentMethod.subscription.routes";
 
@@ -37,6 +38,7 @@ app.use("/offer", offerRoutes);
 app.use("/subscription", subscriptionRoutes);
 app.use("/payment/method", paymentMethodRoutes);
 app.use("/payment/cardoption", creditOrDebitCardRoutes);
+app.use("/payment/walletoption", digitalWalletRoutes);
 app.get("/check/status", (req: express.Request, res: express.Response) => {
   return res.status(200).send({
     successState: true,
