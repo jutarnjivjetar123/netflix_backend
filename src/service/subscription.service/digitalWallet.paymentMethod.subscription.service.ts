@@ -109,58 +109,69 @@ export default class DigitalWalletService {
       userEmail = userEmailTemp.email;
     }
 
-    if (isDefaultOrFirst) {
-      //Check if the user already has a default payment method
-      const digitalWalletsByUser =
-        await DigitalWalletRepository.getAllDigitalWalletsByUser(user);
-      if (digitalWalletsByUser.length > 0) {
-        //Check if the user already has a default payment method
-        if (
-          digitalWalletsByUser.find(
-            (digitalWallet) => digitalWallet.isDefaultForUser
-          )
-        ) {
+    //Get all DigitalWallet objects linked with the given User
+    const allDigitalWalletsByUser =
+      await DigitalWalletRepository.getAllDigitalWalletsByUser(user);
+
+    if (allDigitalWalletsByUser.length > 0) {
+      //Check does User already have a DigitalWallet set as default
+      if (isDefaultOrFirst) {
+        if (allDigitalWalletsByUser.find((wallet) => wallet.isDefaultForUser)) {
           return new ReturnObjectHandler(
-            "User already has a default payment method",
+            "User already has a default payment device",
             null,
             400
           );
         }
       }
 
-      const creditOrDebitCardsByUser =
-        await CreditOrDebitCardService.getAllCreditOrDebitCardsByUser(user);
-
-      if (creditOrDebitCardsByUser.returnValue.length > 0) {
-        //Check if the user already has a default payment method
-        if (
-          creditOrDebitCardsByUser.returnValue.find(
-            (creditOrDebitCard) => creditOrDebitCard.isDefaultForUser
-          )
-        ) {
-          return new ReturnObjectHandler(
-            "User already has a default payment method",
-            null,
-            400
-          );
-        }
-      }
-
-      //Check does the User already have a DigitalWallet with the same walletId issued by the same provider
+      //Check does User already have a DigitalWallet object linked with them with the same paymentMethodId and walletId
       if (
-        digitalWalletsByUser.find(
-          (digitalWallet) =>
-            digitalWallet.walletId === walletId &&
-            digitalWallet.paymentMethod.paymentMethodId === paymentMethodId
+        allDigitalWalletsByUser.find(
+          (wallet) =>
+            wallet.walletId === walletId &&
+            wallet.paymentMethod.paymentMethodId === paymentMethodId
         )
       ) {
         return new ReturnObjectHandler(
-          "User has already the same digital wallet",
+          "Digital wallet already registered",
           null,
           400
         );
       }
     }
+
+    //Check does User already have a CreditOrDebitCard object set as default linked with them
+    const allCreditOrDebitCardsByUser =
+      await CreditOrDebitCardService.getAllCreditOrDebitCardsByUser(user);
+
+    if (
+      allCreditOrDebitCardsByUser.returnValue.length > 0 &&
+      isDefaultOrFirst
+    ) {
+      if (
+        allCreditOrDebitCardsByUser.returnValue.find(
+          (card) => card.isDefaultForUser
+        )
+      ) {
+        return new ReturnObjectHandler(
+          "User already has a default payment device",
+          null,
+          400
+        );
+      }
+    }
+
+    let emailToUse = email;
+    if (useRegistrationEmail === true) {
+      emailToUse = userEmail;
+      console.log("Email is being used");
+    }
+
+    console.log("Given email:" + email);
+    console.log("User email: " + userEmail);
+    console.log("Is registration email used: " + useRegistrationEmail);
+    console.log("Email to use: " + emailToUse);
     //Attempt to create new DigitalWallet
     const newDigitalWallet = new DigitalWallet();
     newDigitalWallet.walletId = walletId;
@@ -168,9 +179,10 @@ export default class DigitalWalletService {
     newDigitalWallet.paymentMethod = paymentMethod.returnValue;
     newDigitalWallet.isDefaultForUser = isDefaultOrFirst;
     newDigitalWallet.walletLink = walletLink;
-    newDigitalWallet.email = useRegistrationEmail ? userEmail : email;
+    newDigitalWallet.email = emailToUse;
     newDigitalWallet.createdAt = new Date().getTime().toString();
 
+    console.log("Used email: " + newDigitalWallet.email);
     const newDigitalWalletCreated =
       await DigitalWalletRepository.createDigitalWallet(newDigitalWallet);
 
