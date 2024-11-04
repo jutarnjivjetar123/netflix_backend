@@ -213,4 +213,16 @@ export default class CreditOrDebitCardService {
       200
     );
   }
+
+  //Return CreditOrDebitCard object where isDefaultForUser property is set to true
+  public static async getDefaultCreditOrDebitCardByUser(
+    user: User
+  ): Promise<ReturnObjectHandler<CreditOrDebitCard>> {
+    const defaultCard =
+      await CreditOrDebitCardRepository.getDefaultCreditOrDebitCardByUser(user);
+    if (defaultCard == null) {
+      return new ReturnObjectHandler("No default card was found", null, 404);
+    }
+    return new ReturnObjectHandler("Found default card", defaultCard, 200);
+  }
 }

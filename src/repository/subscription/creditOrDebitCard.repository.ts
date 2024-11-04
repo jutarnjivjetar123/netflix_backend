@@ -74,4 +74,49 @@ export default class CreditOrDebitCardRepository {
         return null;
       });
   }
+
+  //Get CreditOrDebitCard where the isDefaultForUser property is set to true
+  public static async getDefaultCreditOrDebitCardByUser(
+    user: User
+  ): Promise<CreditOrDebitCard> {
+    return await DatabaseConnection.getRepository(CreditOrDebitCard)
+      .findOne({
+        where: {
+          user: user,
+          isDefaultForUser: true,
+        },
+        relations: {
+          user: true,
+        },
+      })
+      .then((data) => {
+        if (data) {
+          console.log(
+            "[LOG DATA] - " +
+              new Date() +
+              " -> LOG::Info::Repository::Subscription::CreditOrDebitCard::getDefaultCreditOrDebitCardByUser::Found CreditOrDebitCard object with property isDefaultForUser set to true, connected to User object with following userId: " +
+              user.userId
+          );
+          return data;
+        }
+        console.log(
+          "[LOG DATA] - " +
+            new Date() +
+            " -> LOG::Info::Repository::Subscription::CreditOrDebitCard::getDefaultCreditOrDebitCardByUser::Failed to find CreditOrDebitCard object with property isDefaultForUser set to true, connected to User object with following userId: " +
+            user.userId
+        );
+        return null;
+      })
+      .catch((error) => {
+        console.log(
+          "[LOG DATA] - " +
+            new Date() +
+            " -> LOG::Error::Repository::Subscription::CreditOrDebitCard::getDefaultCreditOrDebitCardByUser::Error occurred while trying to retrieve CreditOrDebitCard object with property isDefaultForUser set to true, connected to User object with following userId: " +
+            user.userId +
+            ", error message: " +
+            error.message
+        );
+        return null;
+      });
+  }
 }

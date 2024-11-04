@@ -6,6 +6,7 @@ import PaymentMethodService from "./paymentMethod.subscription.service";
 import { PaymentMethodTypes } from "../../enums/PaymentMethod";
 import DigitalWalletRepository from "../../repository/subscription/digitalWallet.paymentMethod.subscription.repository";
 import CreditOrDebitCardService from "./creditOrDebitCard.paymentMethod.subscription.service";
+import User from "../../models/user.model/user.model";
 export default class DigitalWalletService {
   public static async createDigitalWallet(
     userPublicId: string,
@@ -197,6 +198,25 @@ export default class DigitalWalletService {
     return new ReturnObjectHandler(
       "Digital wallet created",
       newDigitalWalletCreated,
+      200
+    );
+  }
+
+  //Get DigitalWallet object connected to User object with provided userId where isDefaultForUser set to true
+  public static async getDefaultDigitalWalletByUser(user: User) {
+    const defaultDigitalWallet =
+      await DigitalWalletRepository.getDefaultDigitalWalletByUser(user);
+    if (!defaultDigitalWallet) {
+      return new ReturnObjectHandler(
+        "No default digital wallet found",
+        null,
+        404
+      );
+    }
+
+    return new ReturnObjectHandler(
+      "Found default digital wallet",
+      defaultDigitalWallet,
       200
     );
   }

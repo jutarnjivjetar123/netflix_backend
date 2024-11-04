@@ -3,7 +3,7 @@ import { DatabaseConnection } from "../../database/config.database";
 import Subscription from "../../models/subscription.model/subscription.model";
 import User from "../../models/user.model/user.model";
 import Offer from "../../models/subscription.model/offer.model";
-import PaymentDevice from "../../models/subscription.model/paymentDevice.model";
+
 
 export default class SubscriptionRepository {
   public static async getSubscriptionByUser(
@@ -17,7 +17,6 @@ export default class SubscriptionRepository {
         relations: {
           user: true,
           offer: true,
-          paymentDevice: true,
         },
       })
       .then((data) => {
@@ -57,12 +56,10 @@ export default class SubscriptionRepository {
   public static async createSubscription(
     user: User,
     offer: Offer,
-    paymentDevice: PaymentDevice
   ): Promise<Subscription | null> {
     const newSubscription = new Subscription();
     newSubscription.user = user;
     newSubscription.offer = offer;
-    newSubscription.paymentDevice = paymentDevice;
     newSubscription.expiresAt = (
       new Date().getTime() +
       30 * 24 * 60 * 60 * 1000
@@ -100,18 +97,11 @@ export default class SubscriptionRepository {
   public static async updateSubscription(
     subscription: Subscription,
 
-    newPaymentDevice?: PaymentDevice,
     newOffer?: Offer,
     newExpiryDateTime?: string,
     isActive?: boolean
   ): Promise<Subscription | null> {
-    if (newPaymentDevice) {
-      subscription.paymentDevice =
-        subscription.paymentDevice.paymentDeviceId !==
-        newPaymentDevice.paymentDeviceId
-          ? newPaymentDevice
-          : subscription.paymentDevice;
-    }
+
     if (newOffer) {
       subscription.offer =
         subscription.offer.offerId !== newOffer.offerId
