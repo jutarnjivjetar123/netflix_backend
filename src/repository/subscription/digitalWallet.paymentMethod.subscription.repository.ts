@@ -81,6 +81,7 @@ export default class DigitalWalletRepository {
         },
         relations: {
           user: true,
+          paymentMethod: true,
         },
       })
       .then((data) => {

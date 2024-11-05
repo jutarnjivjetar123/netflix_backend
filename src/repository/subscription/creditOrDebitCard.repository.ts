@@ -87,6 +87,7 @@ export default class CreditOrDebitCardRepository {
         },
         relations: {
           user: true,
+          paymentMethod: true,
         },
       })
       .then((data) => {

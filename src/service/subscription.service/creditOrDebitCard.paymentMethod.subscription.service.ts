@@ -220,6 +220,7 @@ export default class CreditOrDebitCardService {
   ): Promise<ReturnObjectHandler<CreditOrDebitCard>> {
     const defaultCard =
       await CreditOrDebitCardRepository.getDefaultCreditOrDebitCardByUser(user);
+    console.log(defaultCard);
     if (defaultCard == null) {
       return new ReturnObjectHandler("No default card was found", null, 404);
     }

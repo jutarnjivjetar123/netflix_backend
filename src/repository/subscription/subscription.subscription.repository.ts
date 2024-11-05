@@ -93,7 +93,7 @@ export default class SubscriptionRepository {
         return null;
       });
   }
-
+  
   public static async updateSubscription(
     subscription: Subscription,
 
